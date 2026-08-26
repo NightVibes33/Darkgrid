@@ -58,6 +58,11 @@
 :host([data-darkgrid-shadow-on]) a{color:#e7e7e7!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-links]) a{color:var(--darkgrid-accent)!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a{color:#e7e7e7!important;text-shadow:none!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a [data-darkgrid-text]{color:#e7e7e7!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a[data-darkgrid-before-text]::before,
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a[data-darkgrid-after-text]::after,
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a [data-darkgrid-before-text]::before,
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a [data-darkgrid-after-text]::after{color:#e7e7e7!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-border]{border-color:#343434!important;outline-color:#343434!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-borders]) [data-darkgrid-border]{border-color:rgba(var(--darkgrid-accent-rgb),.5)!important;outline-color:rgba(var(--darkgrid-accent-rgb),.58)!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-shadow]{box-shadow:var(--darkgrid-box-shadow)!important}
@@ -142,8 +147,6 @@
     const probe = document.createElement("div");
     if (value) probe.setAttribute("style", value);
 
-    // Avoid relying on CSSStyleDeclaration iteration, which is inconsistent on
-    // older Safari versions still supported by the iOS 15 deployment target.
     for (let index = probe.style.length - 1; index >= 0; index -= 1) {
       const name = probe.style.item(index);
       if (name && name.startsWith("--darkgrid-")) probe.style.removeProperty(name);
@@ -287,12 +290,23 @@
     root.prepend(style);
   }
 
+  function prepareShadowRoot(root) {
+    const isShadowRoot = typeof ShadowRoot !== "undefined" && root instanceof ShadowRoot;
+    if (!isShadowRoot) return;
+
+    const host = root.host;
+    if (!host) return;
+    shadowHosts.add(host);
+    ensureShadowStyles(root);
+    syncShadowHost(host);
+    observeRoot(root);
+  }
+
   function inspectElement(element) {
     if (!(element instanceof Element)
       || element === document.documentElement
       || element === document.body) return;
 
-    // SVG paint nodes are handled by the owning SVG as one icon/artwork unit.
     if (element.ownerSVGElement) return;
 
     if (SKIP_TAGS.has(element.tagName) || Engine.isMediaElement(element)) {
@@ -310,8 +324,6 @@
     const hasGradient = Engine.hasGradientBackground(backgroundImage) && !hasRaster;
     const background = Engine.parseCssColor(style.backgroundColor);
 
-    // Raster backgrounds are never put into the frost/surface system. Their
-    // pixels remain exactly under site control.
     if (!hasRaster && background && background.a > 0.02) {
       const mapped = Engine.buildSurfaceColors(background, accent);
       setPropertyIfNeeded(element, "--darkgrid-surface-normal", mapped.normal);
@@ -339,16 +351,14 @@
     mapPseudoElement(element, "after", "::after");
 
     if (element.shadowRoot) {
-      shadowHosts.add(element);
-      ensureShadowStyles(element.shadowRoot);
-      syncShadowHost(element);
-      observeRoot(element.shadowRoot);
+      prepareShadowRoot(element.shadowRoot);
       queueScan(element.shadowRoot);
     }
   }
 
   function scanSubtree(root) {
     if (!root) return;
+    prepareShadowRoot(root);
     if (root instanceof Element) inspectElement(root);
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
@@ -411,11 +421,46 @@
     return target;
   }
 
+  function isSiteStylesheetElement(node) {
+    if (!(node instanceof Element)) return false;
+    if (node.tagName === "STYLE") return !node.hasAttribute("data-darkgrid-shadow-style");
+    if (node.tagName !== "LINK") return false;
+    return String(node.getAttribute("rel") || "")
+      .toLowerCase()
+      .split(/\s+/)
+      .includes("stylesheet");
+  }
+
+  function stylesheetContext(node) {
+    let root = null;
+    try {
+      root = node?.getRootNode?.() || null;
+    } catch {}
+
+    const isShadowRoot = typeof ShadowRoot !== "undefined" && root instanceof ShadowRoot;
+    return isShadowRoot ? root : document.documentElement;
+  }
+
+  function mutationAffectsStylesheet(mutation) {
+    if (mutation.type === "characterData") {
+      return isSiteStylesheetElement(mutation.target.parentElement);
+    }
+
+    if (mutation.type === "attributes") {
+      return isSiteStylesheetElement(mutation.target);
+    }
+
+    if (mutation.type === "childList") {
+      if (isSiteStylesheetElement(mutation.target)) return true;
+      return [...mutation.addedNodes, ...mutation.removedNodes].some(isSiteStylesheetElement);
+    }
+
+    return false;
+  }
+
   function observeRoot(root) {
     if (!observer || !root || observedRoots.has(root)) return;
 
-    // Observe all attributes. Modern sites frequently drive CSS through
-    // data-theme/data-state/aria-selected/etc., not just class/style.
     observer.observe(root, {
       childList: true,
       subtree: true,
@@ -430,6 +475,11 @@
     if (!observer) {
       observer = new MutationObserver(mutations => {
         for (const mutation of mutations) {
+          if (mutationAffectsStylesheet(mutation)) {
+            queueScan(stylesheetContext(mutation.target));
+            continue;
+          }
+
           if (mutation.type === "childList") {
             let needsParentScan = mutation.removedNodes.length > 0;
             for (const node of mutation.addedNodes) {
@@ -481,6 +531,12 @@
       if (event.persisted) void applySettings();
       else rescan();
     });
+
+    // A LINK stylesheet can mutate the DOM before its network CSS has loaded.
+    // Re-scan when the actual stylesheet load completes as well.
+    document.addEventListener("load", event => {
+      if (isSiteStylesheetElement(event.target)) queueScan(stylesheetContext(event.target));
+    }, true);
   }
 
   async function applySettings() {
