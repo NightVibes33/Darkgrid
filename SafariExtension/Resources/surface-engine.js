@@ -1,6 +1,5 @@
 (() => {
   const MEDIA_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "PICTURE", "IFRAME", "OBJECT", "EMBED"]);
-  const SIMPLE_SVG_PAINT_TAGS = new Set(["PATH", "RECT", "CIRCLE", "ELLIPSE", "LINE", "POLYLINE", "POLYGON"]);
   function clamp(value,min,max){return Math.min(max,Math.max(min,value));}
   function parseRgbComponent(token){const t=String(token||"").trim();return t.endsWith("%")?clamp(Math.round((parseFloat(t)/100)*255),0,255):clamp(Math.round(parseFloat(t)),0,255);}
   function parseAlphaComponent(token){if(token==null||token==="")return 1;const t=String(token).trim();return t.endsWith("%")?clamp(parseFloat(t)/100,0,1):clamp(parseFloat(t),0,1);}
@@ -17,10 +16,10 @@
   function isMediaElement(el){return Boolean(el?.tagName&&MEDIA_TAGS.has(el.tagName));}
   function hasRasterBackground(v){return/url\s*\(/i.test(String(v||""));}
   function hasGradientBackground(v){return/(?:linear|radial|conic)-gradient\s*\(/i.test(String(v||""));}
-  function hasVisibleBorder(s){if(!s)return false;return["Top","Right","Bottom","Left"].some(side=>parseFloat(s[`border${side}Width`]||"0")>0&&!['none','hidden'].includes(String(s[`border${side}Style`]||'none')));}
+  function hasVisibleBorder(s){if(!s)return false;return["Top","Right","Bottom","Left"].some(side=>{const width=parseFloat(s[`border${side}Width`]||"0"),style=String(s[`border${side}Style`]||"none"),raw=String(s[`border${side}Color`]||"").trim().toLowerCase(),color=parseCssColor(raw);return width>0&&!['none','hidden'].includes(style)&&raw!=="transparent"&&(!color||color.a>.02);});}
   function rewriteBoxShadow(v){const t=String(v||"");if(!t||t==='none')return null;return t.replace(/(rgba?\([^)]*\)|color\([^)]*\))/gi,x=>{const c=parseCssColor(x);if(!c)return x;const z=relativeLuminance(c)>.45?24:8;return formatRgb({r:z,g:z,b:z},Math.min(c.a??1,.55));});}
   function hasDirectText(el){if(!el?.childNodes)return false;if(["INPUT","TEXTAREA","SELECT","OPTION","BUTTON"].includes(el.tagName))return true;return[...el.childNodes].some(n=>n.nodeType===3&&String(n.nodeValue||"").trim());}
   function pseudoIsRenderable(s){if(!s)return false;const c=String(s.content||"").trim();return c!==""&&c!=="none"&&c!=="normal";}
-  function isSimpleMonochromeSvg(svg){if(!svg||svg.tagName!=="SVG"||svg.querySelector("image,foreignObject,linearGradient,radialGradient,pattern,filter,mask,clipPath"))return false;const p=[...svg.querySelectorAll("path,rect,circle,ellipse,line,polyline,polygon")];if(!p.length||p.length>16)return false;for(const n of p){const s=getComputedStyle(n);for(const prop of['fill','stroke']){const c=parseCssColor(s[prop]);if(c&&c.a>.02&&Math.max(c.r,c.g,c.b)-Math.min(c.r,c.g,c.b)>34)return false}}return true;}
+  function isSimpleMonochromeSvg(svg){if(!svg||svg.tagName!=="SVG"||svg.querySelector("image,foreignObject,linearGradient,radialGradient,pattern,filter,mask,clipPath"))return false;const p=[...svg.querySelectorAll("path,rect,circle,ellipse,line,polyline,polygon")];if(!p.length||p.length>16)return false;let painted=0;for(const n of p){const s=getComputedStyle(n);for(const prop of['fill','stroke']){const c=parseCssColor(s[prop]);if(c&&c.a>.02){painted++;if(Math.max(c.r,c.g,c.b)-Math.min(c.r,c.g,c.b)>34)return false;}}}return painted>0;}
   globalThis.DarkgridSurfaceEngine=Object.freeze({parseCssColor,relativeLuminance,perceivedBrightness,formatRgb,rgbToHex,ensureReadableAccent,buildSurfaceColors,buildPageFrostColor,buildForegroundColor,isMediaElement,hasRasterBackground,hasGradientBackground,hasVisibleBorder,rewriteBoxShadow,hasDirectText,pseudoIsRenderable,isSimpleMonochromeSvg});
 })();
