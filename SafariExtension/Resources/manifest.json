@@ -23,7 +23,8 @@
       "css": ["theme.css"],
       "js": ["surface-engine.js", "content.js"],
       "run_at": "document_start",
-      "all_frames": true
+      "all_frames": true,
+      "match_about_blank": true
     }
   ]
 }
