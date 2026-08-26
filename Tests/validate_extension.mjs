@@ -54,9 +54,11 @@ assert.doesNotMatch(css, /darkgrid-(?:frost|glow)::(?:before|after)/);
 assert.doesNotMatch(css, /backdrop-filter\s*:/i);
 assert.doesNotMatch(css, /mix-blend-mode:\s*screen/i);
 assert.doesNotMatch(css, /background-color:\s*transparent\s*!important/i);
-assert.doesNotMatch(css, /filter:\s*none\s*!important/i, 'media filters must remain site-owned');
-assert.doesNotMatch(css, /mix-blend-mode:\s*normal\s*!important/i, 'media blend mode must remain site-owned');
-assert.doesNotMatch(css, /opacity:\s*1\s*!important/i, 'media opacity must remain site-owned');
+assert.doesNotMatch(
+  css,
+  /:where\(img,\s*video,\s*canvas,\s*picture,\s*iframe,\s*object,\s*embed\)[\s\S]*?\}/i,
+  'Darkgrid must not impose a presentation block on media elements'
+);
 assert.match(css, /data-darkgrid-before-surface/);
 assert.match(css, /data-darkgrid-before-gradient/);
 assert.match(css, /data-darkgrid-before-shadow/);
