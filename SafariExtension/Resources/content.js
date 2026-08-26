@@ -2,6 +2,10 @@
   const DEFAULT_SETTINGS = {
     enabled: true,
     accentColor: "#00F5FF",
+    frostTint: true,
+    colorLinks: true,
+    colorBorders: true,
+    colorAllText: false,
     edgeGlow: false,
     excludedDomains: []
   };
@@ -54,7 +58,12 @@
 
     root.style.setProperty("--darkgrid-accent", accent);
     root.style.setProperty("--darkgrid-accent-rgb", `${r}, ${g}, ${b}`);
+
     root.classList.toggle("darkgrid-on", shouldEnable);
+    root.classList.toggle("darkgrid-frost", shouldEnable && Boolean(settings.frostTint));
+    root.classList.toggle("darkgrid-color-links", shouldEnable && Boolean(settings.colorLinks));
+    root.classList.toggle("darkgrid-color-borders", shouldEnable && Boolean(settings.colorBorders));
+    root.classList.toggle("darkgrid-color-text", shouldEnable && Boolean(settings.colorAllText));
     root.classList.toggle("darkgrid-glow", shouldEnable && Boolean(settings.edgeGlow));
   }
 
