@@ -1,6 +1,10 @@
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",
+  frostTint: true,
+  colorLinks: true,
+  colorBorders: true,
+  colorAllText: false,
   edgeGlow: false,
   excludedDomains: []
 };
