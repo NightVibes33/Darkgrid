@@ -21,7 +21,7 @@
     {
       "matches": ["<all_urls>"],
       "css": ["theme.css"],
-      "js": ["content.js"],
+      "js": ["surface-engine.js", "content.js"],
       "run_at": "document_start",
       "all_frames": false
     }
