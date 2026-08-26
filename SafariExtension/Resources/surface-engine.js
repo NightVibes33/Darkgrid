@@ -115,15 +115,11 @@
     const normalizedBrightness = perceivedBrightness(original) / 255;
     const luminance = relativeLuminance(original);
 
-    // Keep more hierarchy than a flat black replacement while still keeping the
-    // entire mapped range OLED-dark.
     const level = clamp(Math.round(2 + (Math.pow(normalizedBrightness, 0.82) * 44)), 2, 46);
     const neutral = { r: level, g: level, b: level };
     const frostAmount = luminance > 0.6 ? 0.105 : luminance > 0.18 ? 0.085 : 0.06;
     const frost = mixRgb(neutral, accent, frostAmount);
 
-    // Critical: retain the website's original alpha. A translucent panel remains
-    // translucent instead of becoming an opaque sheet over images or video.
     const alpha = clamp(original.a == null ? 1 : original.a, 0, 1);
     return {
       normal: formatRgb(neutral, alpha),
@@ -142,7 +138,7 @@
   }
 
   function isMediaElement(element) {
-    return Boolean(element?.tagName && MEDIA_TAGS.has(element.tagName));
+    return Boolean(element?.tagName && MEDIA_TAGS.has(String(element.tagName).toUpperCase()));
   }
 
   function hasRasterBackground(value) {
@@ -181,7 +177,7 @@
 
   function hasDirectText(element) {
     if (!element?.childNodes) return false;
-    if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(element.tagName)) return true;
+    if (["INPUT", "TEXTAREA", "SELECT", "OPTION", "BUTTON"].includes(String(element.tagName).toUpperCase())) return true;
     return Array.from(element.childNodes).some(node =>
       node.nodeType === Node.TEXT_NODE && String(node.nodeValue || "").trim()
     );
@@ -200,7 +196,7 @@
   }
 
   function isSimpleMonochromeSvg(svg) {
-    if (!svg || svg.tagName !== "SVG") return false;
+    if (!svg || String(svg.tagName || "").toUpperCase() !== "SVG") return false;
     if (svg.querySelector("image,foreignObject,linearGradient,radialGradient,pattern,filter,mask,clipPath")) return false;
 
     const shapes = Array.from(svg.querySelectorAll("path,rect,circle,ellipse,line,polyline,polygon"));
