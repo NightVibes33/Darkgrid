@@ -21,11 +21,16 @@ jobs:
       - name: Test rendering primitives
         run: node Tests/surface_engine_test.mjs
 
-      - name: Browser integration (WebKit)
+      - name: Install WebKit test runtime
         run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps webkit
-          node Tests/browser_integration.mjs
+
+      - name: Browser integration (WebKit)
+        run: node Tests/browser_integration.mjs
+
+      - name: Popup integration (WebKit)
+        run: node Tests/popup_integration.mjs
 
       - name: Syntax-check JavaScript
         run: |
@@ -33,6 +38,10 @@ jobs:
           node --check SafariExtension/Resources/surface-engine.js
           node --check SafariExtension/Resources/content.js
           node --check SafariExtension/Resources/popup.js
+          node --check Tests/surface_engine_test.mjs
+          node --check Tests/browser_integration.mjs
+          node --check Tests/popup_integration.mjs
+          node --check Tests/validate_extension.mjs
 
   build-ios:
     runs-on: macos-26
@@ -53,11 +62,19 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Validate source metadata and icon
+      - name: Validate source metadata, resources, and icon
         run: |
           plutil -lint App/Info.plist
           plutil -lint SafariExtension/Info.plist
           python3 -m json.tool SafariExtension/Resources/manifest.json >/dev/null
+          python3 - <<'PY'
+          import json
+          p='SafariExtension/Resources/manifest.json'
+          m=json.load(open(p))
+          assert m['version']=='1.2.0'
+          assert m['content_scripts'][0]['all_frames'] is True
+          assert m['content_scripts'][0]['match_about_blank'] is True
+          PY
           python3 -m json.tool App/Assets.xcassets/Contents.json >/dev/null
           python3 -m json.tool App/Assets.xcassets/AppIcon.appiconset/Contents.json >/dev/null
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" SafariExtension/Info.plist | grep -Fx "com.apple.Safari.web-extension"
@@ -105,7 +122,7 @@ jobs:
           plutil -lint "$EXT/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" "$EXT/Info.plist" | grep -F "SafariWebExtensionHandler"
-          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist" | grep -Fx "1.1.0"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist" | grep -Fx "1.2.0"
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist" | grep -Fx "$GITHUB_RUN_NUMBER"
           for file in manifest.json background.js surface-engine.js content.js popup.html popup.css popup.js theme.css; do
             test -f "$EXT/$file" || { echo "Missing extension resource: $file"; exit 1; }
@@ -113,7 +130,10 @@ jobs:
           python3 -m json.tool "$EXT/manifest.json" >/dev/null
           grep -F '"all_frames": true' "$EXT/manifest.json"
           grep -F '"match_about_blank": true' "$EXT/manifest.json"
-          ! grep -E 'darkgrid-(frost|glow)::(before|after)|backdrop-filter[[:space:]]*:|mix-blend-mode:[[:space:]]*screen' "$EXT/theme.css"
+          grep -F 'darkgrid-measuring' "$EXT/theme.css"
+          grep -F 'adoptedStyleSheets' "$EXT/content.js"
+          grep -F 'getStateOfExtension' App/ContentView.swift
+          ! grep -E 'backdrop-filter[[:space:]]*:|background-blend-mode:[[:space:]]*multiply' "$EXT/theme.css"
           ! grep -E ':where\(img,[[:space:]]*video,[[:space:]]*canvas,[[:space:]]*picture,[[:space:]]*iframe,[[:space:]]*object,[[:space:]]*embed\)' "$EXT/theme.css"
 
       - name: Package and revalidate unsigned IPA
@@ -129,10 +149,12 @@ jobs:
           EXT="$PACKAGED_APP/PlugIns/DarkgridExtension.appex"
           test -d "$EXT"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PACKAGED_APP/Info.plist" | grep -Fx "1.2.0"
           /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PACKAGED_APP/Info.plist" | grep -Fx "$GITHUB_RUN_NUMBER"
-          for file in manifest.json surface-engine.js content.js theme.css popup.html popup.js; do
+          for file in manifest.json background.js surface-engine.js content.js theme.css popup.html popup.css popup.js; do
             test -f "$EXT/$file"
           done
+          shasum -a 256 Darkgrid-unsigned.ipa
 
       - uses: actions/upload-artifact@v4
         with:

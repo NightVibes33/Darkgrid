@@ -20,6 +20,9 @@ const PRESET_NAMES = new Map([
 let settings = { ...DEFAULT_SETTINGS };
 let activeDomain = null;
 let colorSaveTimer = 0;
+let accentSaveGeneration = 0;
+let writeGeneration = 0;
+let lastError = "";
 
 const $ = selector => document.querySelector(selector);
 const enabled = $("#enabled");
@@ -33,6 +36,7 @@ const hexColor = $("#hexColor");
 const presetName = $("#presetName");
 const statusDot = $("#statusDot");
 const statusText = $("#statusText");
+const errorText = $("#errorText");
 const domainLabel = $("#domain");
 const siteToggle = $("#siteToggle");
 const presetButtons = Array.from(document.querySelectorAll(".preset"));
@@ -57,9 +61,22 @@ function hexToRgb(hex) {
 }
 
 function safeHex(value) {
-  const normalized = normalizeHex(value) || DEFAULT_SETTINGS.accentColor;
-  if (!Engine) return normalized;
-  return Engine.rgbToHex(Engine.ensureReadableAccent(hexToRgb(normalized)));
+  return normalizeHex(value) || DEFAULT_SETTINGS.accentColor;
+}
+
+function readableHex(value) {
+  const accent = hexToRgb(safeHex(value));
+  if (!Engine) return safeHex(value);
+  return Engine.rgbToHex(Engine.ensureReadableAccent(accent, { r: 46, g: 46, b: 46 }, 4.5));
+}
+
+function normalizeSettings(next) {
+  const normalized = { ...DEFAULT_SETTINGS, ...next };
+  normalized.accentColor = safeHex(normalized.accentColor);
+  normalized.excludedDomains = Array.isArray(normalized.excludedDomains)
+    ? Array.from(new Set(normalized.excludedDomains.map(normalizeHost).filter(Boolean)))
+    : [];
+  return normalized;
 }
 
 function domainIsExcluded(domain) {
@@ -70,48 +87,104 @@ function domainIsExcluded(domain) {
     .some(entry => entry === host);
 }
 
-async function queryActiveTab() {
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  const tab = tabs[0] || null;
-  if (!tab?.url) return;
+function showError(message) {
+  lastError = String(message || "");
+  errorText.textContent = lastError;
+  errorText.hidden = !lastError;
+  if (lastError) {
+    statusText.textContent = "ERROR";
+    statusDot.style.background = "#777";
+    statusDot.style.boxShadow = "none";
+  }
+}
 
+function clearError() {
+  if (!lastError) return;
+  lastError = "";
+  errorText.textContent = "";
+  errorText.hidden = true;
+}
+
+async function queryActiveTab() {
+  activeDomain = null;
   try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs[0] || null;
+    if (!tab?.url) return;
+
     const url = new URL(tab.url);
     if (url.protocol === "http:" || url.protocol === "https:") {
       activeDomain = normalizeHost(url.hostname);
     }
-  } catch {
-    activeDomain = null;
+  } catch (error) {
+    showError(`Could not read the active Safari tab: ${error?.message || error}`);
   }
 }
 
 async function loadSettings() {
-  const stored = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
-  settings = { ...DEFAULT_SETTINGS, ...stored };
-  settings.accentColor = safeHex(settings.accentColor);
-  settings.excludedDomains = Array.isArray(settings.excludedDomains)
-    ? settings.excludedDomains.map(normalizeHost).filter(Boolean)
-    : [];
+  try {
+    const stored = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
+    settings = normalizeSettings(stored);
+  } catch (error) {
+    settings = normalizeSettings(settings);
+    showError(`Could not load settings: ${error?.message || error}`);
+  }
 }
 
-async function saveSettings(patch) {
-  settings = { ...settings, ...patch };
-  await browser.storage.local.set(patch);
+function cancelAccentSave() {
+  accentSaveGeneration += 1;
+  if (colorSaveTimer) {
+    clearTimeout(colorSaveTimer);
+    colorSaveTimer = 0;
+  }
+}
+
+async function persistPatch(patch, { cancelPendingAccent = true } = {}) {
+  if (cancelPendingAccent && Object.prototype.hasOwnProperty.call(patch, "accentColor")) {
+    cancelAccentSave();
+  }
+
+  const generation = ++writeGeneration;
+  const previous = settings;
+  settings = normalizeSettings({ ...settings, ...patch });
   render();
+
+  try {
+    await browser.storage.local.set(patch);
+    if (generation === writeGeneration) clearError();
+    return true;
+  } catch (error) {
+    if (generation === writeGeneration) {
+      settings = previous;
+      render();
+      showError(`Could not save settings: ${error?.message || error}`);
+    }
+    return false;
+  }
 }
 
 function scheduleAccentSave(value) {
   const accentColor = safeHex(value);
-  settings.accentColor = accentColor;
+  cancelAccentSave();
+  const generation = accentSaveGeneration;
+
+  settings = normalizeSettings({ ...settings, accentColor });
   render();
-  clearTimeout(colorSaveTimer);
-  colorSaveTimer = setTimeout(() => void saveSettings({ accentColor }), 90);
+
+  colorSaveTimer = setTimeout(() => {
+    colorSaveTimer = 0;
+    if (generation !== accentSaveGeneration) return;
+    void persistPatch({ accentColor }, { cancelPendingAccent: false });
+  }, 90);
 }
 
 function render() {
   const accent = safeHex(settings.accentColor);
+  const readable = readableHex(accent);
   const rgb = hexToRgb(accent);
+
   document.documentElement.style.setProperty("--accent", accent);
+  document.documentElement.style.setProperty("--accent-readable", readable);
   document.documentElement.style.setProperty("--accent-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 
   enabled.checked = Boolean(settings.enabled);
@@ -124,46 +197,70 @@ function render() {
   hexColor.value = accent;
 
   for (const button of presetButtons) {
-    button.classList.toggle("active", safeHex(button.dataset.color) === accent);
+    const active = safeHex(button.dataset.color) === accent;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
   }
   presetName.textContent = PRESET_NAMES.get(accent) || "CUSTOM";
 
-  const excluded = activeDomain ? domainIsExcluded(activeDomain) : false;
-  const activeHere = Boolean(settings.enabled) && !excluded;
-  statusDot.style.background = activeHere ? accent : "#555";
-  statusDot.style.boxShadow = activeHere ? `0 0 10px ${accent}` : "none";
-  statusText.textContent = !settings.enabled ? "OFF" : excluded ? "EXCLUDED" : "ACTIVE";
+  if (!lastError) {
+    const excluded = activeDomain ? domainIsExcluded(activeDomain) : false;
+    const activeHere = Boolean(settings.enabled) && !excluded;
+    statusDot.style.background = activeHere ? accent : "#555";
+    statusDot.style.boxShadow = activeHere ? `0 0 10px ${accent}` : "none";
+    statusText.textContent = !settings.enabled ? "OFF" : excluded ? "EXCLUDED" : "ACTIVE";
+  }
 
   if (activeDomain) {
+    const excluded = domainIsExcluded(activeDomain);
     domainLabel.textContent = activeDomain;
     siteToggle.disabled = false;
     siteToggle.textContent = excluded ? "ENABLE ON THIS SITE" : "DISABLE ON THIS SITE";
+    siteToggle.setAttribute(
+      "aria-label",
+      excluded ? `Enable Darkgrid on ${activeDomain}` : `Disable Darkgrid on ${activeDomain}`
+    );
   } else {
     domainLabel.textContent = "Unavailable on this page";
     siteToggle.disabled = true;
     siteToggle.textContent = "SITE CONTROL UNAVAILABLE";
+    siteToggle.setAttribute("aria-label", "Site control unavailable on this page");
   }
 }
 
-enabled.addEventListener("change", () => void saveSettings({ enabled: enabled.checked }));
-frostTint.addEventListener("change", () => void saveSettings({ frostTint: frostTint.checked }));
-colorLinks.addEventListener("change", () => void saveSettings({ colorLinks: colorLinks.checked }));
-colorBorders.addEventListener("change", () => void saveSettings({ colorBorders: colorBorders.checked }));
-colorAllText.addEventListener("change", () => void saveSettings({ colorAllText: colorAllText.checked }));
-edgeGlow.addEventListener("change", () => void saveSettings({ edgeGlow: edgeGlow.checked }));
+enabled.addEventListener("change", () => void persistPatch({ enabled: enabled.checked }));
+frostTint.addEventListener("change", () => void persistPatch({ frostTint: frostTint.checked }));
+colorLinks.addEventListener("change", () => void persistPatch({ colorLinks: colorLinks.checked }));
+colorBorders.addEventListener("change", () => void persistPatch({ colorBorders: colorBorders.checked }));
+colorAllText.addEventListener("change", () => void persistPatch({ colorAllText: colorAllText.checked }));
+edgeGlow.addEventListener("change", () => void persistPatch({ edgeGlow: edgeGlow.checked }));
 
 for (const button of presetButtons) {
-  button.addEventListener("click", () => void saveSettings({ accentColor: safeHex(button.dataset.color) }));
+  button.addEventListener("click", () => {
+    cancelAccentSave();
+    void persistPatch({ accentColor: safeHex(button.dataset.color) }, { cancelPendingAccent: false });
+  });
 }
 
 colorPicker.addEventListener("input", () => scheduleAccentSave(colorPicker.value));
+
 hexColor.addEventListener("change", () => {
   const value = normalizeHex(hexColor.value);
-  if (value) void saveSettings({ accentColor: safeHex(value) });
-  else hexColor.value = settings.accentColor;
+  if (value) {
+    cancelAccentSave();
+    void persistPatch({ accentColor: value }, { cancelPendingAccent: false });
+  } else {
+    hexColor.value = settings.accentColor;
+    showError("Enter a six-digit hex color such as #00F5FF.");
+  }
 });
+
 hexColor.addEventListener("keydown", event => {
   if (event.key === "Enter") hexColor.blur();
+  if (event.key === "Escape") {
+    hexColor.value = settings.accentColor;
+    hexColor.blur();
+  }
 });
 
 siteToggle.addEventListener("click", () => {
@@ -172,10 +269,26 @@ siteToggle.addEventListener("click", () => {
   const next = domainIsExcluded(activeDomain)
     ? current.filter(item => item !== activeDomain)
     : Array.from(new Set([...current, activeDomain]));
-  void saveSettings({ excludedDomains: next });
+  void persistPatch({ excludedDomains: next });
+});
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") return;
+
+  if (Object.prototype.hasOwnProperty.call(changes, "accentColor")) cancelAccentSave();
+
+  const patch = {};
+  for (const [key, change] of Object.entries(changes || {})) {
+    if (Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS, key)) patch[key] = change.newValue;
+  }
+  settings = normalizeSettings({ ...settings, ...patch });
+  render();
 });
 
 (async () => {
-  await Promise.all([loadSettings(), queryActiveTab()]);
+  const results = await Promise.allSettled([loadSettings(), queryActiveTab()]);
+  for (const result of results) {
+    if (result.status === "rejected") showError(result.reason?.message || String(result.reason));
+  }
   render();
 })();

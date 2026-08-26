@@ -1,5 +1,6 @@
 :root {
   --accent: #00f5ff;
+  --accent-readable: #00f5ff;
   --accent-rgb: 0, 245, 255;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
   color-scheme: dark;
@@ -13,7 +14,7 @@ html,
 body {
   margin: 0;
   width: 320px;
-  min-height: 460px;
+  min-height: 500px;
   background: #000;
   color: #f4f4f4;
 }
@@ -27,8 +28,14 @@ input {
   font: inherit;
 }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent-readable);
+  outline-offset: 2px;
+}
+
 .panel {
-  min-height: 460px;
+  min-height: 500px;
   padding: 18px;
   background:
     radial-gradient(circle at 100% 0%, rgba(var(--accent-rgb), 0.11), transparent 34%),
@@ -43,7 +50,7 @@ input {
   justify-content: space-between;
   gap: 14px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #1d1d1d;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 h1 {
@@ -56,9 +63,9 @@ h1 {
 
 .brand p {
   margin: 7px 0 0;
-  color: var(--accent);
-  font: 700 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
-  letter-spacing: 2.1px;
+  color: var(--accent-readable);
+  font: 700 10px/1.15 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  letter-spacing: 2px;
 }
 
 .status-row {
@@ -66,8 +73,8 @@ h1 {
   align-items: center;
   gap: 8px;
   padding: 13px 0 2px;
-  color: #a7a7a7;
-  font: 700 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: #c1c1c1;
+  font: 700 11px/1.2 ui-monospace, "SFMono-Regular", Menlo, monospace;
   letter-spacing: 1.2px;
 }
 
@@ -79,15 +86,30 @@ h1 {
   box-shadow: 0 0 10px var(--accent);
 }
 
+.error-text {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #4b4b4b;
+  border-radius: 8px;
+  background: #0a0a0a;
+  color: #dedede;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.error-text[hidden] {
+  display: none;
+}
+
 section {
   margin-top: 18px;
 }
 
 .section-title,
 .setting-name {
-  color: #b8b8b8;
-  font: 800 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
-  letter-spacing: 1.4px;
+  color: #d0d0d0;
+  font: 800 11px/1.2 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  letter-spacing: 1.25px;
 }
 
 .presets {
@@ -101,7 +123,7 @@ section {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  border: 1px solid #252525;
+  border: 1px solid #343434;
   border-radius: 12px;
   background: #080808;
   cursor: pointer;
@@ -122,15 +144,17 @@ section {
 .preset[data-color="#B026FF"] { --preset: #b026ff; }
 
 .preset.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.26), 0 0 16px rgba(var(--accent-rgb), 0.16);
+  border-color: var(--accent-readable);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.26),
+    0 0 16px rgba(var(--accent-rgb), 0.16);
 }
 
 .preset-name {
   margin-top: 9px;
-  color: var(--accent);
+  color: var(--accent-readable);
   text-align: right;
-  font: 700 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font: 700 10px/1.2 ui-monospace, "SFMono-Regular", Menlo, monospace;
   letter-spacing: 1px;
 }
 
@@ -143,8 +167,8 @@ section {
 
 #colorPicker {
   width: 48px;
-  height: 38px;
-  border: 1px solid #2b2b2b;
+  height: 40px;
+  border: 1px solid #393939;
   border-radius: 9px;
   padding: 3px;
   background: #080808;
@@ -152,9 +176,9 @@ section {
 
 #hexColor {
   min-width: 0;
-  height: 38px;
+  height: 40px;
   padding: 0 12px;
-  border: 1px solid #2b2b2b;
+  border: 1px solid #393939;
   border-radius: 9px;
   outline: 0;
   background: #070707;
@@ -164,7 +188,7 @@ section {
 }
 
 #hexColor:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-readable);
   box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.22);
 }
 
@@ -182,18 +206,18 @@ section {
   justify-content: space-between;
   gap: 16px;
   padding: 13px 0;
-  border-bottom: 1px solid #1c1c1c;
+  border-bottom: 1px solid #292929;
 }
 
 .settings-section .setting-row:first-of-type {
-  border-top: 1px solid #1c1c1c;
+  border-top: 1px solid #292929;
 }
 
 .setting-detail {
   margin-top: 5px;
-  color: #686868;
-  font-size: 11px;
-  line-height: 1.25;
+  color: #9b9b9b;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .switch {
@@ -210,15 +234,18 @@ section {
 }
 
 .switch input {
-  width: 0;
-  height: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
   opacity: 0;
+  pointer-events: none;
 }
 
 .slider {
   position: absolute;
   inset: 0;
-  border: 1px solid #303030;
+  border: 1px solid #404040;
   border-radius: 999px;
   background: #111;
   cursor: pointer;
@@ -233,7 +260,7 @@ section {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #666;
+  background: #777;
   transition: 120ms ease;
 }
 
@@ -242,8 +269,13 @@ section {
   height: 16px;
 }
 
+.switch:focus-within .slider {
+  outline: 2px solid var(--accent-readable);
+  outline-offset: 3px;
+}
+
 input:checked + .slider {
-  border-color: var(--accent);
+  border-color: var(--accent-readable);
   background: rgba(var(--accent-rgb), 0.14);
   box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.22);
 }
@@ -270,27 +302,34 @@ input:checked + .slider::before {
 .site-button {
   width: 100%;
   margin-top: 11px;
-  padding: 11px 10px;
-  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  padding: 12px 10px;
+  border: 1px solid var(--accent-readable);
   border-radius: 9px;
   background: rgba(var(--accent-rgb), 0.08);
-  color: var(--accent);
-  font: 800 10px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color: var(--accent-readable);
+  font: 800 10px/1.2 ui-monospace, "SFMono-Regular", Menlo, monospace;
   letter-spacing: 0.8px;
   cursor: pointer;
 }
 
 .site-button:disabled {
-  border-color: #252525;
+  border-color: #343434;
   background: #080808;
-  color: #555;
+  color: #777;
   cursor: default;
 }
 
 footer {
   margin-top: 19px;
-  color: #4f4f4f;
+  color: #8d8d8d;
   text-align: center;
-  font: 700 8px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
-  letter-spacing: 1.5px;
+  font: 700 10px/1.2 ui-monospace, "SFMono-Regular", Menlo, monospace;
+  letter-spacing: 1.2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slider,
+  .slider::before {
+    transition: none;
+  }
 }

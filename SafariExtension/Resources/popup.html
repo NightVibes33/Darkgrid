@@ -1,2 +1,118 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Darkgrid</title><link rel="stylesheet" href="popup.css"></head><body><main class="panel"><header class="brand"><div><h1>DARKGRID</h1><p>NEON DARK MODE</p></div><label class="switch" aria-label="Enable Darkgrid"><input id="enabled" type="checkbox"><span class="slider"></span></label></header><section class="status-row"><span id="statusDot" class="status-dot"></span><span id="statusText">ACTIVE</span></section><section><div class="section-title">ACCENT</div><div class="presets" role="group" aria-label="Neon accent presets"><button class="preset" data-name="CYAN" data-color="#00F5FF" aria-label="Cyan"></button><button class="preset" data-name="RED" data-color="#FF1744" aria-label="Red"></button><button class="preset" data-name="GREEN" data-color="#00FF66" aria-label="Green"></button><button class="preset" data-name="PURPLE" data-color="#B026FF" aria-label="Purple"></button></div><div id="presetName" class="preset-name">CYAN</div></section><section><div class="section-title">CUSTOM COLOR</div><div class="custom-row"><input id="colorPicker" type="color" value="#00f5ff" aria-label="Custom accent color"><input id="hexColor" type="text" value="#00F5FF" maxlength="7" spellcheck="false" aria-label="Hex accent color"></div></section><section class="settings-section"><div class="section-title">APPEARANCE</div><div class="setting-row"><div><div class="setting-name">FROST TINT</div><div class="setting-detail">Tint page surfaces, never media pixels</div></div><label class="switch small"><input id="frostTint" type="checkbox"><span class="slider"></span></label></div><div class="setting-row"><div><div class="setting-name">COLOR LINKS</div><div class="setting-detail">Tint links with the accent</div></div><label class="switch small"><input id="colorLinks" type="checkbox"><span class="slider"></span></label></div><div class="setting-row"><div><div class="setting-name">COLOR BORDERS</div><div class="setting-detail">Tint existing UI borders</div></div><label class="switch small"><input id="colorBorders" type="checkbox"><span class="slider"></span></label></div><div class="setting-row"><div><div class="setting-name">COLOR ALL TEXT</div><div class="setting-detail">Tint page text; link toggle stays independent</div></div><label class="switch small"><input id="colorAllText" type="checkbox"><span class="slider"></span></label></div><div class="setting-row"><div><div class="setting-name">EDGE GLOW</div><div class="setting-detail">Behind-content neon page vignette</div></div><label class="switch small"><input id="edgeGlow" type="checkbox"><span class="slider"></span></label></div></section><section class="site-section"><div class="section-title">CURRENT WEBSITE</div><div id="domain" class="domain">Checking…</div><button id="siteToggle" class="site-button" type="button" disabled>DISABLE ON THIS SITE</button></section><footer>LOCAL ONLY • NO TRACKING</footer></main><script src="surface-engine.js"></script><script src="popup.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Darkgrid</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<main class="panel">
+  <header class="brand">
+    <div>
+      <h1>DARKGRID</h1>
+      <p>NEON DARK MODE</p>
+    </div>
+    <label class="switch" aria-label="Enable Darkgrid">
+      <input id="enabled" type="checkbox" aria-label="Enable Darkgrid">
+      <span class="slider" aria-hidden="true"></span>
+    </label>
+  </header>
+
+  <section class="status-row" aria-live="polite" aria-atomic="true">
+    <span id="statusDot" class="status-dot" aria-hidden="true"></span>
+    <span id="statusText">CHECKING</span>
+  </section>
+  <div id="errorText" class="error-text" role="status" aria-live="polite" hidden></div>
+
+  <section>
+    <div class="section-title">ACCENT</div>
+    <div class="presets" role="group" aria-label="Neon accent presets">
+      <button class="preset" data-name="CYAN" data-color="#00F5FF" aria-label="Cyan accent" aria-pressed="false"></button>
+      <button class="preset" data-name="RED" data-color="#FF1744" aria-label="Red accent" aria-pressed="false"></button>
+      <button class="preset" data-name="GREEN" data-color="#00FF66" aria-label="Green accent" aria-pressed="false"></button>
+      <button class="preset" data-name="PURPLE" data-color="#B026FF" aria-label="Purple accent" aria-pressed="false"></button>
+    </div>
+    <div id="presetName" class="preset-name">CYAN</div>
+  </section>
+
+  <section>
+    <div class="section-title">CUSTOM COLOR</div>
+    <div class="custom-row">
+      <input id="colorPicker" type="color" value="#00f5ff" aria-label="Custom accent color">
+      <input id="hexColor" type="text" value="#00F5FF" maxlength="7" inputmode="text" spellcheck="false" aria-label="Hex accent color">
+    </div>
+  </section>
+
+  <section class="settings-section">
+    <div class="section-title">APPEARANCE</div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-name" id="frostTintLabel">FROST TINT</div>
+        <div class="setting-detail" id="frostTintHelp">Tint page surfaces, never media pixels</div>
+      </div>
+      <label class="switch small">
+        <input id="frostTint" type="checkbox" aria-labelledby="frostTintLabel" aria-describedby="frostTintHelp">
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-name" id="colorLinksLabel">COLOR LINKS</div>
+        <div class="setting-detail" id="colorLinksHelp">Tint links with the accent</div>
+      </div>
+      <label class="switch small">
+        <input id="colorLinks" type="checkbox" aria-labelledby="colorLinksLabel" aria-describedby="colorLinksHelp">
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-name" id="colorBordersLabel">COLOR BORDERS</div>
+        <div class="setting-detail" id="colorBordersHelp">Tint existing UI borders</div>
+      </div>
+      <label class="switch small">
+        <input id="colorBorders" type="checkbox" aria-labelledby="colorBordersLabel" aria-describedby="colorBordersHelp">
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-name" id="colorAllTextLabel">COLOR ALL TEXT</div>
+        <div class="setting-detail" id="colorAllTextHelp">Tint page text; link toggle stays independent</div>
+      </div>
+      <label class="switch small">
+        <input id="colorAllText" type="checkbox" aria-labelledby="colorAllTextLabel" aria-describedby="colorAllTextHelp">
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-name" id="edgeGlowLabel">EDGE GLOW</div>
+        <div class="setting-detail" id="edgeGlowHelp">Viewport-anchored neon vignette</div>
+      </div>
+      <label class="switch small">
+        <input id="edgeGlow" type="checkbox" aria-labelledby="edgeGlowLabel" aria-describedby="edgeGlowHelp">
+        <span class="slider" aria-hidden="true"></span>
+      </label>
+    </div>
+  </section>
+
+  <section class="site-section">
+    <div class="section-title">CURRENT WEBSITE</div>
+    <div id="domain" class="domain">Checking…</div>
+    <button id="siteToggle" class="site-button" type="button" disabled>SITE CONTROL UNAVAILABLE</button>
+  </section>
+
+  <footer>LOCAL ONLY • NO TRACKING</footer>
+</main>
+<script src="surface-engine.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
