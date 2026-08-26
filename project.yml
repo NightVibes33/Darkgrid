@@ -19,8 +19,6 @@ targets:
       - path: App
         excludes:
           - Info.plist
-    info:
-      path: App/Info.plist
     dependencies:
       - target: DarkgridExtension
         embed: true
@@ -31,6 +29,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Info.plist
 
   DarkgridExtension:
     type: app-extension
@@ -41,10 +40,8 @@ targets:
         excludes:
           - Info.plist
           - Resources
-    resources:
       - path: SafariExtension/Resources
-    info:
-      path: SafariExtension/Info.plist
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes33.Darkgrid.Extension
@@ -52,6 +49,7 @@ targets:
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
         GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: SafariExtension/Info.plist
 
 schemes:
   Darkgrid:
