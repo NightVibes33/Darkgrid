@@ -168,20 +168,32 @@ section {
   box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.22);
 }
 
+.settings-section {
+  padding-top: 2px;
+}
+
+.settings-section > .section-title {
+  margin-bottom: 7px;
+}
+
 .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px 0;
-  border-top: 1px solid #1c1c1c;
+  padding: 13px 0;
   border-bottom: 1px solid #1c1c1c;
+}
+
+.settings-section .setting-row:first-of-type {
+  border-top: 1px solid #1c1c1c;
 }
 
 .setting-detail {
   margin-top: 5px;
   color: #686868;
   font-size: 11px;
+  line-height: 1.25;
 }
 
 .switch {
