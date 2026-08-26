@@ -1,0 +1,70 @@
+name: Build Darkgrid
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate manifest and feature wiring
+        run: node Tests/validate_extension.mjs
+      - name: Syntax-check extension scripts
+        run: |
+          node --check SafariExtension/Resources/background.js
+          node --check SafariExtension/Resources/content.js
+          node --check SafariExtension/Resources/popup.js
+
+  build-ios:
+    runs-on: macos-15
+    needs: validate-extension
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Validate property lists
+        run: |
+          plutil -lint App/Info.plist
+          plutil -lint SafariExtension/Info.plist
+          plutil -lint SafariExtension/Resources/manifest.json
+
+      - name: Build unsigned iOS app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Darkgrid.xcodeproj \
+            -scheme Darkgrid \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build | xcpretty
+
+      - name: Package unsigned IPA
+        run: |
+          APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
+          test -d "$APP"
+          rm -rf Payload Darkgrid-unsigned.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry Darkgrid-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Darkgrid-unsigned
+          path: Darkgrid-unsigned.ipa
+          if-no-files-found: error
