@@ -14,6 +14,26 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  function parseRgbComponent(token) {
+    const text = String(token || "").trim();
+    if (text.endsWith("%")) {
+      return clamp(Math.round((Number.parseFloat(text) / 100) * 255), 0, 255);
+    }
+    return clamp(Math.round(Number.parseFloat(text)), 0, 255);
+  }
+
+  function parseAlphaComponent(token) {
+    if (token == null || token === "") {
+      return 1;
+    }
+
+    const text = String(token).trim();
+    if (text.endsWith("%")) {
+      return clamp(Number.parseFloat(text) / 100, 0, 1);
+    }
+    return clamp(Number.parseFloat(text), 0, 1);
+  }
+
   function parseCssColor(value) {
     const text = String(value || "").trim().toLowerCase();
 
@@ -21,17 +41,36 @@
       return null;
     }
 
-    const match = text.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)$/i);
-    if (!match) {
-      return null;
+    const rgbMatch = text.match(
+      /^rgba?\(\s*([\d.]+%?)[,\s]+([\d.]+%?)[,\s]+([\d.]+%?)(?:\s*[,/]\s*([\d.]+%?))?\s*\)$/i
+    );
+
+    if (rgbMatch) {
+      return {
+        r: parseRgbComponent(rgbMatch[1]),
+        g: parseRgbComponent(rgbMatch[2]),
+        b: parseRgbComponent(rgbMatch[3]),
+        a: parseAlphaComponent(rgbMatch[4])
+      };
     }
 
-    return {
-      r: clamp(Math.round(Number(match[1])), 0, 255),
-      g: clamp(Math.round(Number(match[2])), 0, 255),
-      b: clamp(Math.round(Number(match[3])), 0, 255),
-      a: clamp(match[4] == null ? 1 : Number(match[4]), 0, 1)
-    };
+    // Safari may preserve wide-gamut computed colors on modern iOS rather than
+    // serializing them back to rgb(). For dark-mode classification a clamped
+    // channel approximation is sufficient and avoids leaving P3 surfaces bright.
+    const colorMatch = text.match(
+      /^color\(\s*(?:srgb|display-p3)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+%?))?\s*\)$/i
+    );
+
+    if (colorMatch) {
+      return {
+        r: clamp(Math.round(Number.parseFloat(colorMatch[1]) * 255), 0, 255),
+        g: clamp(Math.round(Number.parseFloat(colorMatch[2]) * 255), 0, 255),
+        b: clamp(Math.round(Number.parseFloat(colorMatch[3]) * 255), 0, 255),
+        a: parseAlphaComponent(colorMatch[4])
+      };
+    }
+
+    return null;
   }
 
   function relativeLuminance(rgb) {
