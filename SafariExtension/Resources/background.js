@@ -12,14 +12,8 @@ const DEFAULT_SETTINGS = {
 browser.runtime.onInstalled.addListener(async () => {
   const existing = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
   const missing = {};
-
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-    if (typeof existing[key] === "undefined") {
-      missing[key] = value;
-    }
+    if (typeof existing[key] === "undefined") missing[key] = value;
   }
-
-  if (Object.keys(missing).length > 0) {
-    await browser.storage.local.set(missing);
-  }
+  if (Object.keys(missing).length) await browser.storage.local.set(missing);
 });
