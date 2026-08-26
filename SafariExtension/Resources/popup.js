@@ -1,6 +1,10 @@
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",
+  frostTint: true,
+  colorLinks: true,
+  colorBorders: true,
+  colorAllText: false,
   edgeGlow: false,
   excludedDomains: []
 };
@@ -17,6 +21,10 @@ let activeTab = null;
 let activeDomain = null;
 
 const enabled = document.querySelector("#enabled");
+const frostTint = document.querySelector("#frostTint");
+const colorLinks = document.querySelector("#colorLinks");
+const colorBorders = document.querySelector("#colorBorders");
+const colorAllText = document.querySelector("#colorAllText");
 const edgeGlow = document.querySelector("#edgeGlow");
 const colorPicker = document.querySelector("#colorPicker");
 const hexColor = document.querySelector("#hexColor");
@@ -109,6 +117,10 @@ function render() {
   document.documentElement.style.setProperty("--accent-rgb", `${r}, ${g}, ${b}`);
 
   enabled.checked = Boolean(settings.enabled);
+  frostTint.checked = Boolean(settings.frostTint);
+  colorLinks.checked = Boolean(settings.colorLinks);
+  colorBorders.checked = Boolean(settings.colorBorders);
+  colorAllText.checked = Boolean(settings.colorAllText);
   edgeGlow.checked = Boolean(settings.edgeGlow);
   colorPicker.value = accent.toLowerCase();
   hexColor.value = accent;
@@ -137,6 +149,22 @@ function render() {
 
 enabled.addEventListener("change", () => {
   void saveSettings({ enabled: enabled.checked });
+});
+
+frostTint.addEventListener("change", () => {
+  void saveSettings({ frostTint: frostTint.checked });
+});
+
+colorLinks.addEventListener("change", () => {
+  void saveSettings({ colorLinks: colorLinks.checked });
+});
+
+colorBorders.addEventListener("change", () => {
+  void saveSettings({ colorBorders: colorBorders.checked });
+});
+
+colorAllText.addEventListener("change", () => {
+  void saveSettings({ colorAllText: colorAllText.checked });
 });
 
 edgeGlow.addEventListener("change", () => {
