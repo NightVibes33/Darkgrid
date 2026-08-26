@@ -99,6 +99,10 @@
   let waitingForRoot = false;
   let lifecycleHooksInstalled = false;
 
+  function normalizedTagName(element) {
+    return String(element?.tagName || "").toUpperCase();
+  }
+
   function normalizeHost(value) {
     return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
   }
@@ -309,14 +313,14 @@
 
     if (element.ownerSVGElement) return;
 
-    if (SKIP_TAGS.has(element.tagName) || Engine.isMediaElement(element)) {
+    if (SKIP_TAGS.has(normalizedTagName(element)) || Engine.isMediaElement(element)) {
       clearManagedElement(element);
       return;
     }
 
     clearManagedElement(element);
 
-    if (element.tagName === "SVG") mapSvg(element);
+    if (normalizedTagName(element) === "SVG") mapSvg(element);
 
     const style = getComputedStyle(element);
     const backgroundImage = String(style.backgroundImage || "none");
@@ -363,7 +367,7 @@
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode(node) {
-        if (SKIP_TAGS.has(node.tagName) || Engine.isMediaElement(node)) {
+        if (SKIP_TAGS.has(normalizedTagName(node)) || Engine.isMediaElement(node)) {
           return NodeFilter.FILTER_REJECT;
         }
         return NodeFilter.FILTER_ACCEPT;
@@ -423,8 +427,9 @@
 
   function isSiteStylesheetElement(node) {
     if (!(node instanceof Element)) return false;
-    if (node.tagName === "STYLE") return !node.hasAttribute("data-darkgrid-shadow-style");
-    if (node.tagName !== "LINK") return false;
+    const tagName = normalizedTagName(node);
+    if (tagName === "STYLE") return !node.hasAttribute("data-darkgrid-shadow-style");
+    if (tagName !== "LINK") return false;
     return String(node.getAttribute("rel") || "")
       .toLowerCase()
       .split(/\s+/)
@@ -532,8 +537,6 @@
       else rescan();
     });
 
-    // A LINK stylesheet can mutate the DOM before its network CSS has loaded.
-    // Re-scan when the actual stylesheet load completes as well.
     document.addEventListener("load", event => {
       if (isSiteStylesheetElement(event.target)) queueScan(stylesheetContext(event.target));
     }, true);
