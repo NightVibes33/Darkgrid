@@ -30,10 +30,31 @@ const content = fs.readFileSync(path.join(resources, "content.js"), "utf8");
 assert.match(content, /browser\.storage\.local/, "Content script must load local settings");
 assert.match(content, /excludedDomains/, "Content script must honor per-site exclusions");
 assert.match(content, /darkgrid-glow/, "Content script must support edge glow");
+for (const feature of ["frostTint", "colorLinks", "colorBorders", "colorAllText"]) {
+  assert.ok(content.includes(feature), `Content script must support ${feature}`);
+}
+for (const className of ["darkgrid-frost", "darkgrid-color-links", "darkgrid-color-borders", "darkgrid-color-text"]) {
+  assert.ok(content.includes(className), `Content script must toggle ${className}`);
+}
 
-const popup = fs.readFileSync(path.join(resources, "popup.js"), "utf8");
+const theme = fs.readFileSync(path.join(resources, "theme.css"), "utf8");
+assert.match(theme, /darkgrid-frost::before/, "Theme must render the full-page frost tint");
+assert.match(theme, /mix-blend-mode:\s*screen/, "Frost tint must blend over the rendered webpage");
+assert.match(theme, /darkgrid-color-links/, "Theme must gate link accenting");
+assert.match(theme, /darkgrid-color-borders/, "Theme must gate border accenting");
+assert.match(theme, /darkgrid-color-text/, "Theme must gate all-text accenting");
+
+const popupScript = fs.readFileSync(path.join(resources, "popup.js"), "utf8");
 for (const color of ["#00F5FF", "#FF1744", "#00FF66", "#B026FF"]) {
-  assert.ok(popup.includes(color), `Missing required neon preset ${color}`);
+  assert.ok(popupScript.includes(color), `Missing required neon preset ${color}`);
+}
+for (const feature of ["frostTint", "colorLinks", "colorBorders", "colorAllText"]) {
+  assert.ok(popupScript.includes(feature), `Popup must persist ${feature}`);
+}
+
+const popupHtml = fs.readFileSync(path.join(resources, "popup.html"), "utf8");
+for (const control of ["frostTint", "colorLinks", "colorBorders", "colorAllText", "edgeGlow"]) {
+  assert.ok(popupHtml.includes(`id="${control}"`), `Popup is missing ${control} toggle`);
 }
 
 console.log("Darkgrid extension validation passed.");
