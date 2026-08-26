@@ -27,7 +27,7 @@
   ]);
 
   const surfaceRecords = new WeakMap();
-  const observedRoots = new WeakSet();
+  let observedRoots = new WeakSet();
   const pendingRoots = new Set();
 
   let observer = null;
@@ -240,7 +240,7 @@
     if (observer) {
       observer.disconnect();
     }
-    observedRoots.delete?.(document.documentElement);
+    observedRoots = new WeakSet();
     pendingRoots.clear();
     if (scanFrame) {
       cancelAnimationFrame(scanFrame);
