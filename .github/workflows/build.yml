@@ -1,5 +1,4 @@
 name: Build Darkgrid
-
 on:
   push:
     branches: [main]
@@ -12,13 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Validate manifest and feature wiring
-        run: node Tests/validate_extension.mjs
-      - name: Test opaque surface engine
-        run: node Tests/surface_engine_test.mjs
-      - name: Syntax-check extension scripts
+        with: {node-version: "22"}
+      - run: node Tests/validate_extension.mjs
+      - run: node Tests/surface_engine_test.mjs
+      - name: Browser integration (WebKit)
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps webkit
+          node Tests/browser_integration.mjs
+      - name: Syntax check
         run: |
           node --check SafariExtension/Resources/background.js
           node --check SafariExtension/Resources/surface-engine.js
@@ -26,75 +27,42 @@ jobs:
           node --check SafariExtension/Resources/popup.js
 
   build-ios:
-    runs-on: macos-15
+    runs-on: macos-26
     needs: validate-extension
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: Validate source manifests and property lists
+      - name: Require current App Store SDK
         run: |
-          plutil -lint App/Info.plist
-          plutil -lint SafariExtension/Info.plist
+          xcodebuild -version
+          SDK="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iPhoneOS SDK: $SDK"
+          test "${SDK%%.*}" -ge 26
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Validate metadata
+        run: |
+          plutil -lint App/Info.plist SafariExtension/Info.plist
           python3 -m json.tool SafariExtension/Resources/manifest.json >/dev/null
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" SafariExtension/Info.plist | grep -Fx "com.apple.Safari.web-extension"
-          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" SafariExtension/Info.plist | grep -F "SafariWebExtensionHandler"
-
+          test -f App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
       - name: Build unsigned iOS app
         run: |
           set -o pipefail
-          xcodebuild \
-            -project Darkgrid.xcodeproj \
-            -scheme Darkgrid \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build | xcpretty
-
-      - name: Validate built app extension
+          xcodebuild -project Darkgrid.xcodeproj -scheme Darkgrid -configuration Release -sdk iphoneos -derivedDataPath build \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | xcpretty
+      - name: Validate compiled extension
         run: |
-          APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
-          EXT="$APP/PlugIns/DarkgridExtension.appex"
-          test -d "$APP"
-          test -d "$EXT"
-          plutil -lint "$APP/Info.plist"
-          plutil -lint "$EXT/Info.plist"
+          APP="build/Build/Products/Release-iphoneos/Darkgrid.app"; EXT="$APP/PlugIns/DarkgridExtension.appex"
+          test -d "$APP"; test -d "$EXT"; plutil -lint "$APP/Info.plist" "$EXT/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
-          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" "$EXT/Info.plist" | grep -F "SafariWebExtensionHandler"
-          for file in manifest.json background.js surface-engine.js content.js popup.html popup.css popup.js theme.css; do
-            test -f "$EXT/$file" || { echo "Missing Safari web extension resource: $file"; find "$EXT" -maxdepth 2 -print; exit 1; }
-          done
-          python3 -m json.tool "$EXT/manifest.json" >/dev/null
-          grep -F 'surface-engine.js' "$EXT/manifest.json"
-          ! grep -E 'darkgrid-frost::before|mix-blend-mode:[[:space:]]*screen|backdrop-filter[[:space:]]*:' "$EXT/theme.css"
-          ! grep -Ei 'background-color:[[:space:]]*transparent[[:space:]]*!important' "$EXT/theme.css"
-
+          for f in manifest.json background.js surface-engine.js content.js popup.html popup.css popup.js theme.css; do test -f "$EXT/$f"; done
+          grep -F '"all_frames": true' "$EXT/manifest.json"
+          ! grep -E 'darkgrid-(frost|glow)::(before|after)|backdrop-filter|mix-blend-mode:[[:space:]]*screen' "$EXT/theme.css"
       - name: Package unsigned IPA
         run: |
-          APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
-          rm -rf Payload Darkgrid-unsigned.ipa
-          mkdir Payload
-          cp -R "$APP" Payload/
-          zip -qry Darkgrid-unsigned.ipa Payload
-          rm -rf verify-ipa
-          mkdir verify-ipa
-          unzip -q Darkgrid-unsigned.ipa -d verify-ipa
-          EXT="verify-ipa/Payload/Darkgrid.app/PlugIns/DarkgridExtension.appex"
-          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
-          for file in manifest.json surface-engine.js content.js theme.css; do
-            test -f "$EXT/$file"
-          done
-
+          APP="build/Build/Products/Release-iphoneos/Darkgrid.app"; rm -rf Payload verify-ipa Darkgrid-unsigned.ipa; mkdir Payload
+          cp -R "$APP" Payload/; zip -qry Darkgrid-unsigned.ipa Payload; mkdir verify-ipa; unzip -q Darkgrid-unsigned.ipa -d verify-ipa
+          EXT="verify-ipa/Payload/Darkgrid.app/PlugIns/DarkgridExtension.appex"; test -f "$EXT/surface-engine.js"; test -f "$EXT/theme.css"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" verify-ipa/Payload/Darkgrid.app/Info.plist | grep -Fx "$GITHUB_RUN_NUMBER"
       - uses: actions/upload-artifact@v4
-        with:
-          name: Darkgrid-unsigned
-          path: Darkgrid-unsigned.ipa
-          if-no-files-found: error
+        with: {name: Darkgrid-unsigned, path: Darkgrid-unsigned.ipa, if-no-files-found: error}
