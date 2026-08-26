@@ -1,3 +1,4 @@
+const Engine = globalThis.DarkgridSurfaceEngine;
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",
@@ -10,37 +11,31 @@ const DEFAULT_SETTINGS = {
 };
 
 const PRESET_NAMES = new Map([
-  ["#00F5FF", "CYAN"],
-  ["#FF1744", "RED"],
-  ["#00FF66", "GREEN"],
-  ["#B026FF", "PURPLE"]
+  ["#00F5FF", "CYAN"], ["#FF1744", "RED"], ["#00FF66", "GREEN"], ["#B026FF", "PURPLE"]
 ]);
 
 let settings = { ...DEFAULT_SETTINGS };
-let activeTab = null;
 let activeDomain = null;
+let colorSaveTimer = 0;
 
-const enabled = document.querySelector("#enabled");
-const frostTint = document.querySelector("#frostTint");
-const colorLinks = document.querySelector("#colorLinks");
-const colorBorders = document.querySelector("#colorBorders");
-const colorAllText = document.querySelector("#colorAllText");
-const edgeGlow = document.querySelector("#edgeGlow");
-const colorPicker = document.querySelector("#colorPicker");
-const hexColor = document.querySelector("#hexColor");
-const presetName = document.querySelector("#presetName");
-const statusDot = document.querySelector("#statusDot");
-const statusText = document.querySelector("#statusText");
-const domainLabel = document.querySelector("#domain");
-const siteToggle = document.querySelector("#siteToggle");
+const $ = selector => document.querySelector(selector);
+const enabled = $("#enabled");
+const frostTint = $("#frostTint");
+const colorLinks = $("#colorLinks");
+const colorBorders = $("#colorBorders");
+const colorAllText = $("#colorAllText");
+const edgeGlow = $("#edgeGlow");
+const colorPicker = $("#colorPicker");
+const hexColor = $("#hexColor");
+const presetName = $("#presetName");
+const statusDot = $("#statusDot");
+const statusText = $("#statusText");
+const domainLabel = $("#domain");
+const siteToggle = $("#siteToggle");
 const presetButtons = [...document.querySelectorAll(".preset")];
 
-function normalizeDomain(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^www\./, "")
-    .replace(/^\.+|\.+$/g, "");
+function normalizeHost(value) {
+  return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
 }
 
 function normalizeHex(value) {
@@ -51,42 +46,40 @@ function normalizeHex(value) {
 
 function hexToRgb(hex) {
   const value = hex.slice(1);
-  return [
-    parseInt(value.slice(0, 2), 16),
-    parseInt(value.slice(2, 4), 16),
-    parseInt(value.slice(4, 6), 16)
-  ];
+  return { r: parseInt(value.slice(0, 2), 16), g: parseInt(value.slice(2, 4), 16), b: parseInt(value.slice(4, 6), 16) };
+}
+
+function safeHex(value) {
+  const normalized = normalizeHex(value) || DEFAULT_SETTINGS.accentColor;
+  if (!Engine) return normalized;
+  return Engine.rgbToHex(Engine.ensureReadableAccent(hexToRgb(normalized)));
 }
 
 function domainIsExcluded(domain) {
-  const host = normalizeDomain(domain);
-  return (settings.excludedDomains || [])
-    .map(normalizeDomain)
-    .some(item => item && (host === item || host.endsWith(`.${item}`)));
+  const host = normalizeHost(domain);
+  return (settings.excludedDomains || []).map(normalizeHost).filter(Boolean).some(entry => {
+    if (entry.startsWith("*.")) {
+      const base = entry.slice(2);
+      return host === base || host.endsWith(`.${base}`);
+    }
+    return host === entry;
+  });
 }
 
 async function queryActiveTab() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  activeTab = tabs[0] || null;
-
-  if (!activeTab?.url) {
-    return;
-  }
-
+  const tab = tabs[0] || null;
+  if (!tab?.url) return;
   try {
-    const url = new URL(activeTab.url);
-    if (url.protocol === "http:" || url.protocol === "https:") {
-      activeDomain = normalizeDomain(url.hostname);
-    }
-  } catch {
-    activeDomain = null;
-  }
+    const url = new URL(tab.url);
+    if (url.protocol === "http:" || url.protocol === "https:") activeDomain = normalizeHost(url.hostname);
+  } catch { activeDomain = null; }
 }
 
 async function loadSettings() {
   const stored = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
   settings = { ...DEFAULT_SETTINGS, ...stored };
-  settings.accentColor = normalizeHex(settings.accentColor) || DEFAULT_SETTINGS.accentColor;
+  settings.accentColor = safeHex(settings.accentColor);
   settings.excludedDomains = Array.isArray(settings.excludedDomains) ? settings.excludedDomains : [];
 }
 
@@ -94,27 +87,21 @@ async function saveSettings(patch) {
   settings = { ...settings, ...patch };
   await browser.storage.local.set(patch);
   render();
-  await refreshActivePage();
 }
 
-async function refreshActivePage() {
-  if (!activeTab?.id) {
-    return;
-  }
-
-  try {
-    await browser.tabs.sendMessage(activeTab.id, { type: "darkgrid:refresh" });
-  } catch {
-    // The current tab can be a Safari/internal page where content scripts cannot run.
-  }
+function scheduleAccentSave(value) {
+  const accentColor = safeHex(value);
+  settings.accentColor = accentColor;
+  render();
+  clearTimeout(colorSaveTimer);
+  colorSaveTimer = setTimeout(() => void saveSettings({ accentColor }), 90);
 }
 
 function render() {
-  const accent = normalizeHex(settings.accentColor) || DEFAULT_SETTINGS.accentColor;
-  const [r, g, b] = hexToRgb(accent);
-
+  const accent = safeHex(settings.accentColor);
+  const rgb = hexToRgb(accent);
   document.documentElement.style.setProperty("--accent", accent);
-  document.documentElement.style.setProperty("--accent-rgb", `${r}, ${g}, ${b}`);
+  document.documentElement.style.setProperty("--accent-rgb", `${rgb.r}, ${rgb.g}, ${rgb.b}`);
 
   enabled.checked = Boolean(settings.enabled);
   frostTint.checked = Boolean(settings.frostTint);
@@ -125,21 +112,19 @@ function render() {
   colorPicker.value = accent.toLowerCase();
   hexColor.value = accent;
 
-  for (const button of presetButtons) {
-    button.classList.toggle("active", button.dataset.color === accent);
-  }
-
+  for (const button of presetButtons) button.classList.toggle("active", safeHex(button.dataset.color) === accent);
   presetName.textContent = PRESET_NAMES.get(accent) || "CUSTOM";
-  statusDot.style.background = settings.enabled ? accent : "#555";
-  statusDot.style.boxShadow = settings.enabled ? `0 0 10px ${accent}` : "none";
-  statusText.textContent = settings.enabled ? "ACTIVE" : "OFF";
+
+  const excluded = activeDomain ? domainIsExcluded(activeDomain) : false;
+  const activeHere = Boolean(settings.enabled) && !excluded;
+  statusDot.style.background = activeHere ? accent : "#555";
+  statusDot.style.boxShadow = activeHere ? `0 0 10px ${accent}` : "none";
+  statusText.textContent = !settings.enabled ? "OFF" : excluded ? "EXCLUDED" : "ACTIVE";
 
   if (activeDomain) {
     domainLabel.textContent = activeDomain;
     siteToggle.disabled = false;
-    siteToggle.textContent = domainIsExcluded(activeDomain)
-      ? "ENABLE ON THIS SITE"
-      : "DISABLE ON THIS SITE";
+    siteToggle.textContent = excluded ? "ENABLE ON THIS SITE" : "DISABLE ON THIS SITE";
   } else {
     domainLabel.textContent = "Unavailable on this page";
     siteToggle.disabled = true;
@@ -147,69 +132,28 @@ function render() {
   }
 }
 
-enabled.addEventListener("change", () => {
-  void saveSettings({ enabled: enabled.checked });
-});
+enabled.addEventListener("change", () => void saveSettings({ enabled: enabled.checked }));
+frostTint.addEventListener("change", () => void saveSettings({ frostTint: frostTint.checked }));
+colorLinks.addEventListener("change", () => void saveSettings({ colorLinks: colorLinks.checked }));
+colorBorders.addEventListener("change", () => void saveSettings({ colorBorders: colorBorders.checked }));
+colorAllText.addEventListener("change", () => void saveSettings({ colorAllText: colorAllText.checked }));
+edgeGlow.addEventListener("change", () => void saveSettings({ edgeGlow: edgeGlow.checked }));
 
-frostTint.addEventListener("change", () => {
-  void saveSettings({ frostTint: frostTint.checked });
-});
-
-colorLinks.addEventListener("change", () => {
-  void saveSettings({ colorLinks: colorLinks.checked });
-});
-
-colorBorders.addEventListener("change", () => {
-  void saveSettings({ colorBorders: colorBorders.checked });
-});
-
-colorAllText.addEventListener("change", () => {
-  void saveSettings({ colorAllText: colorAllText.checked });
-});
-
-edgeGlow.addEventListener("change", () => {
-  void saveSettings({ edgeGlow: edgeGlow.checked });
-});
-
-for (const button of presetButtons) {
-  button.addEventListener("click", () => {
-    void saveSettings({ accentColor: button.dataset.color });
-  });
-}
-
-colorPicker.addEventListener("input", () => {
-  const value = normalizeHex(colorPicker.value);
-  if (value) {
-    void saveSettings({ accentColor: value });
-  }
-});
-
+for (const button of presetButtons) button.addEventListener("click", () => void saveSettings({ accentColor: safeHex(button.dataset.color) }));
+colorPicker.addEventListener("input", () => scheduleAccentSave(colorPicker.value));
 hexColor.addEventListener("change", () => {
   const value = normalizeHex(hexColor.value);
-  if (value) {
-    void saveSettings({ accentColor: value });
-  } else {
-    hexColor.value = settings.accentColor;
-  }
+  if (value) void saveSettings({ accentColor: safeHex(value) });
+  else hexColor.value = settings.accentColor;
 });
-
-hexColor.addEventListener("keydown", event => {
-  if (event.key === "Enter") {
-    hexColor.blur();
-  }
-});
+hexColor.addEventListener("keydown", event => { if (event.key === "Enter") hexColor.blur(); });
 
 siteToggle.addEventListener("click", () => {
-  if (!activeDomain) {
-    return;
-  }
-
-  const normalized = normalizeDomain(activeDomain);
-  const current = (settings.excludedDomains || []).map(normalizeDomain).filter(Boolean);
-  const next = domainIsExcluded(normalized)
-    ? current.filter(item => item !== normalized)
-    : [...new Set([...current, normalized])];
-
+  if (!activeDomain) return;
+  const current = (settings.excludedDomains || []).map(normalizeHost).filter(Boolean);
+  const next = domainIsExcluded(activeDomain)
+    ? current.filter(item => item !== activeDomain)
+    : [...new Set([...current, activeDomain])];
   void saveSettings({ excludedDomains: next });
 });
 
