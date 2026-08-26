@@ -11,7 +11,10 @@ const DEFAULT_SETTINGS = {
 };
 
 const PRESET_NAMES = new Map([
-  ["#00F5FF", "CYAN"], ["#FF1744", "RED"], ["#00FF66", "GREEN"], ["#B026FF", "PURPLE"]
+  ["#00F5FF", "CYAN"],
+  ["#FF1744", "RED"],
+  ["#00FF66", "GREEN"],
+  ["#B026FF", "PURPLE"]
 ]);
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -32,7 +35,7 @@ const statusDot = $("#statusDot");
 const statusText = $("#statusText");
 const domainLabel = $("#domain");
 const siteToggle = $("#siteToggle");
-const presetButtons = [...document.querySelectorAll(".preset")];
+const presetButtons = Array.from(document.querySelectorAll(".preset"));
 
 function normalizeHost(value) {
   return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
@@ -46,7 +49,11 @@ function normalizeHex(value) {
 
 function hexToRgb(hex) {
   const value = hex.slice(1);
-  return { r: parseInt(value.slice(0, 2), 16), g: parseInt(value.slice(2, 4), 16), b: parseInt(value.slice(4, 6), 16) };
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16)
+  };
 }
 
 function safeHex(value) {
@@ -57,30 +64,34 @@ function safeHex(value) {
 
 function domainIsExcluded(domain) {
   const host = normalizeHost(domain);
-  return (settings.excludedDomains || []).map(normalizeHost).filter(Boolean).some(entry => {
-    if (entry.startsWith("*.")) {
-      const base = entry.slice(2);
-      return host === base || host.endsWith(`.${base}`);
-    }
-    return host === entry;
-  });
+  return (settings.excludedDomains || [])
+    .map(normalizeHost)
+    .filter(Boolean)
+    .some(entry => entry === host);
 }
 
 async function queryActiveTab() {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0] || null;
   if (!tab?.url) return;
+
   try {
     const url = new URL(tab.url);
-    if (url.protocol === "http:" || url.protocol === "https:") activeDomain = normalizeHost(url.hostname);
-  } catch { activeDomain = null; }
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      activeDomain = normalizeHost(url.hostname);
+    }
+  } catch {
+    activeDomain = null;
+  }
 }
 
 async function loadSettings() {
   const stored = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
   settings = { ...DEFAULT_SETTINGS, ...stored };
   settings.accentColor = safeHex(settings.accentColor);
-  settings.excludedDomains = Array.isArray(settings.excludedDomains) ? settings.excludedDomains : [];
+  settings.excludedDomains = Array.isArray(settings.excludedDomains)
+    ? settings.excludedDomains.map(normalizeHost).filter(Boolean)
+    : [];
 }
 
 async function saveSettings(patch) {
@@ -112,7 +123,9 @@ function render() {
   colorPicker.value = accent.toLowerCase();
   hexColor.value = accent;
 
-  for (const button of presetButtons) button.classList.toggle("active", safeHex(button.dataset.color) === accent);
+  for (const button of presetButtons) {
+    button.classList.toggle("active", safeHex(button.dataset.color) === accent);
+  }
   presetName.textContent = PRESET_NAMES.get(accent) || "CUSTOM";
 
   const excluded = activeDomain ? domainIsExcluded(activeDomain) : false;
@@ -139,21 +152,26 @@ colorBorders.addEventListener("change", () => void saveSettings({ colorBorders: 
 colorAllText.addEventListener("change", () => void saveSettings({ colorAllText: colorAllText.checked }));
 edgeGlow.addEventListener("change", () => void saveSettings({ edgeGlow: edgeGlow.checked }));
 
-for (const button of presetButtons) button.addEventListener("click", () => void saveSettings({ accentColor: safeHex(button.dataset.color) }));
+for (const button of presetButtons) {
+  button.addEventListener("click", () => void saveSettings({ accentColor: safeHex(button.dataset.color) }));
+}
+
 colorPicker.addEventListener("input", () => scheduleAccentSave(colorPicker.value));
 hexColor.addEventListener("change", () => {
   const value = normalizeHex(hexColor.value);
   if (value) void saveSettings({ accentColor: safeHex(value) });
   else hexColor.value = settings.accentColor;
 });
-hexColor.addEventListener("keydown", event => { if (event.key === "Enter") hexColor.blur(); });
+hexColor.addEventListener("keydown", event => {
+  if (event.key === "Enter") hexColor.blur();
+});
 
 siteToggle.addEventListener("click", () => {
   if (!activeDomain) return;
   const current = (settings.excludedDomains || []).map(normalizeHost).filter(Boolean);
   const next = domainIsExcluded(activeDomain)
     ? current.filter(item => item !== activeDomain)
-    : [...new Set([...current, activeDomain])];
+    : Array.from(new Set([...current, activeDomain]));
   void saveSettings({ excludedDomains: next });
 });
 
