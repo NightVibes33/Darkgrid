@@ -85,14 +85,14 @@ struct ContentView: View {
                 .tracking(1.5)
                 .foregroundColor(neon)
 
-            setupRow(number: "01", text: "Open Settings → Safari → Extensions → Darkgrid.")
+            setupRow(number: "01", text: "Open Settings → Apps → Safari → Extensions → Darkgrid. On iOS 17 and earlier, open Settings → Safari → Extensions.")
             setupRow(number: "02", text: "Turn Darkgrid on.")
-            setupRow(number: "03", text: "Grant website access to all websites once.")
-            setupRow(number: "04", text: "In Safari, open Darkgrid from the Extensions menu to change colors, glow, or exclude the current site.")
+            setupRow(number: "03", text: "Set website access to Allow on Every Website / Always Allow once.")
+            setupRow(number: "04", text: "In Safari, open Darkgrid from the Extensions menu to change colors, frost, glow, or exclude the current site.")
 
             Divider().background(Color.white.opacity(0.12))
 
-            Text("Darkgrid does not ask for its own permission on every website. Safari owns the website-access permission; after all-site access is granted, the theme runs automatically on allowed pages.")
+            Text("Darkgrid does not ask for its own permission on every website. Safari owns website-access permission; after all-site access is granted, the theme runs automatically on allowed pages.")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

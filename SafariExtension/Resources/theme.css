@@ -1,179 +1,127 @@
-/* Darkgrid maps opaque page surfaces to opaque dark equivalents. It never
-   places a full-screen tint above page content, so photos and video retain
-   their original pixels. */
-
 html.darkgrid-on {
   --darkgrid-accent: #00f5ff;
   --darkgrid-accent-rgb: 0, 245, 255;
-  --darkgrid-page-frost: rgb(0, 6, 6);
+  --darkgrid-page-frost: rgb(0, 7, 8);
   color-scheme: dark !important;
   background-color: #000 !important;
 }
 
-html.darkgrid-on.darkgrid-frost {
-  background-color: var(--darkgrid-page-frost) !important;
-}
+html.darkgrid-on.darkgrid-frost { background-color: var(--darkgrid-page-frost) !important; }
+html.darkgrid-on body { background-color: #000 !important; color: #eaeaea !important; }
+html.darkgrid-on.darkgrid-frost body { background-color: var(--darkgrid-page-frost) !important; }
+html.darkgrid-on.darkgrid-color-text body { color: var(--darkgrid-accent) !important; }
 
-html.darkgrid-on body {
-  background-color: #000 !important;
-  color: #eaeaea !important;
-}
-
-html.darkgrid-on.darkgrid-frost body {
-  background-color: var(--darkgrid-page-frost) !important;
-}
-
-/* Only elements that actually had an opaque/gradient page surface are mapped.
-   Transparent layout wrappers are left alone instead of being forced clear. */
 html.darkgrid-on [data-darkgrid-surface] {
   background-color: var(--darkgrid-surface-normal, #080808) !important;
 }
-
 html.darkgrid-on.darkgrid-frost [data-darkgrid-surface] {
   background-color: var(--darkgrid-surface-frost, #080808) !important;
 }
+html.darkgrid-on [data-darkgrid-gradient] { background-blend-mode: multiply !important; }
 
-/* Keep CSS gradients, but darken them against the mapped opaque surface.
-   Raster/background photos are never given blend-mode treatment. */
-html.darkgrid-on [data-darkgrid-gradient] {
-  background-blend-mode: multiply !important;
-}
+html.darkgrid-on [data-darkgrid-text] { color: #e7e7e7 !important; }
+html.darkgrid-on.darkgrid-color-text [data-darkgrid-text] { color: var(--darkgrid-accent) !important; }
 
-html.darkgrid-on :where(
-  h1, h2, h3, h4, h5, h6,
-  p, span, label, legend,
-  li, dt, dd, blockquote,
-  td, th, caption,
-  small, strong, em, code, pre
-) {
-  color: #e7e7e7 !important;
-}
-
-/* Links stay readable when link coloring is disabled. */
 html.darkgrid-on :where(a, a:visited) {
   color: #e7e7e7 !important;
   text-decoration-color: #666 !important;
 }
-
 html.darkgrid-on.darkgrid-color-links :where(a, a:visited) {
   color: var(--darkgrid-accent) !important;
-  text-decoration-color: rgba(var(--darkgrid-accent-rgb), 0.68) !important;
-  text-shadow: 0 0 9px rgba(var(--darkgrid-accent-rgb), 0.10) !important;
+  text-decoration-color: rgba(var(--darkgrid-accent-rgb), .68) !important;
+  text-shadow: 0 0 9px rgba(var(--darkgrid-accent-rgb), .10) !important;
+}
+html.darkgrid-on.darkgrid-color-text:not(.darkgrid-color-links) :where(a, a:visited) {
+  color: #e7e7e7 !important;
+  text-decoration-color: #666 !important;
+  text-shadow: none !important;
+}
+html.darkgrid-on.darkgrid-color-text:not(.darkgrid-color-links) a [data-darkgrid-text] {
+  color: #e7e7e7 !important;
+}
+html.darkgrid-on.darkgrid-color-text:not(.darkgrid-color-links) a[data-darkgrid-before-text]::before,
+html.darkgrid-on.darkgrid-color-text:not(.darkgrid-color-links) a[data-darkgrid-after-text]::after,
+html.darkgrid-on.darkgrid-color-text:not(.darkgrid-color-links) a [data-darkgrid-before-text]::before,
+html.darkgrid-on.darkgrid-color-text:not(.darkgrid-color-links) a [data-darkgrid-after-text]::after {
+  color: #e7e7e7 !important;
 }
 
 html.darkgrid-on :where(button, input, textarea, select, option, [role="button"]) {
-  background-color: #070707 !important;
+  background-color: #080808 !important;
   color: #f2f2f2 !important;
-  border-color: #353535 !important;
   caret-color: var(--darkgrid-accent) !important;
 }
+html.darkgrid-on.darkgrid-color-text :where(button, input, textarea, select, option, [role="button"]) {
+  color: var(--darkgrid-accent) !important;
+}
 
-/* Border coloring is limited to controls and elements that actually had a
-   visible border before Darkgrid touched them. This avoids drawing synthetic
-   outlines around cards, images, and layout sections. */
 html.darkgrid-on [data-darkgrid-border] {
   border-color: #343434 !important;
   outline-color: #343434 !important;
 }
-
-html.darkgrid-on.darkgrid-color-borders [data-darkgrid-border],
-html.darkgrid-on.darkgrid-color-borders :where(button, input, textarea, select, [role="button"]) {
-  border-color: rgba(var(--darkgrid-accent-rgb), 0.50) !important;
-  outline-color: rgba(var(--darkgrid-accent-rgb), 0.58) !important;
+html.darkgrid-on.darkgrid-color-borders [data-darkgrid-border] {
+  border-color: rgba(var(--darkgrid-accent-rgb), .50) !important;
+  outline-color: rgba(var(--darkgrid-accent-rgb), .58) !important;
 }
 
-html.darkgrid-on :where(input, textarea)::placeholder {
-  color: #888 !important;
-  opacity: 1 !important;
-}
+html.darkgrid-on [data-darkgrid-shadow] { box-shadow: var(--darkgrid-box-shadow) !important; }
+
+html.darkgrid-on [data-darkgrid-before-surface]::before { background-color: var(--darkgrid-before-normal) !important; }
+html.darkgrid-on.darkgrid-frost [data-darkgrid-before-surface]::before { background-color: var(--darkgrid-before-frost) !important; }
+html.darkgrid-on [data-darkgrid-after-surface]::after { background-color: var(--darkgrid-after-normal) !important; }
+html.darkgrid-on.darkgrid-frost [data-darkgrid-after-surface]::after { background-color: var(--darkgrid-after-frost) !important; }
+html.darkgrid-on [data-darkgrid-before-gradient]::before,
+html.darkgrid-on [data-darkgrid-after-gradient]::after { background-blend-mode: multiply !important; }
+html.darkgrid-on [data-darkgrid-before-shadow]::before { box-shadow: var(--darkgrid-before-shadow) !important; }
+html.darkgrid-on [data-darkgrid-after-shadow]::after { box-shadow: var(--darkgrid-after-shadow) !important; }
+
+html.darkgrid-on [data-darkgrid-before-text]::before { color: var(--darkgrid-before-text) !important; }
+html.darkgrid-on [data-darkgrid-after-text]::after { color: var(--darkgrid-after-text) !important; }
+html.darkgrid-on.darkgrid-color-text [data-darkgrid-before-text]::before,
+html.darkgrid-on.darkgrid-color-text [data-darkgrid-after-text]::after { color: var(--darkgrid-accent) !important; }
+
+html.darkgrid-on :where(input, textarea)::placeholder { color: #909090 !important; opacity: 1 !important; }
+html.darkgrid-on.darkgrid-color-text :where(input, textarea)::placeholder { color: var(--darkgrid-accent) !important; }
 
 html.darkgrid-on :where(input[type="checkbox"], input[type="radio"], input[type="range"], progress) {
   accent-color: var(--darkgrid-accent) !important;
 }
-
 html.darkgrid-on :where(:focus-visible) {
   outline: 2px solid #777 !important;
   outline-offset: 2px !important;
 }
-
 html.darkgrid-on.darkgrid-color-borders :where(:focus-visible) {
   outline-color: var(--darkgrid-accent) !important;
-  box-shadow: 0 0 0 2px rgba(var(--darkgrid-accent-rgb), 0.18),
-              0 0 14px rgba(var(--darkgrid-accent-rgb), 0.35) !important;
+  box-shadow: 0 0 0 2px rgba(var(--darkgrid-accent-rgb), .18), 0 0 14px rgba(var(--darkgrid-accent-rgb), .35) !important;
 }
 
-html.darkgrid-on :where(hr) {
-  border-color: #2b2b2b !important;
-  background-color: #2b2b2b !important;
-}
-
+html.darkgrid-on :where(hr) { border-color: #2b2b2b !important; background-color: #2b2b2b !important; }
 html.darkgrid-on.darkgrid-color-borders :where(hr) {
-  border-color: rgba(var(--darkgrid-accent-rgb), 0.50) !important;
-  background-color: rgba(var(--darkgrid-accent-rgb), 0.34) !important;
+  border-color: rgba(var(--darkgrid-accent-rgb), .50) !important;
+  background-color: rgba(var(--darkgrid-accent-rgb), .34) !important;
 }
 
-html.darkgrid-on :where(table) {
-  border-color: #2b2b2b !important;
+html.darkgrid-on [data-darkgrid-svg-fill] { fill: #dcdcdc !important; }
+html.darkgrid-on [data-darkgrid-svg-stroke] { stroke: #dcdcdc !important; }
+html.darkgrid-on.darkgrid-color-links a [data-darkgrid-svg-fill] { fill: var(--darkgrid-accent) !important; }
+html.darkgrid-on.darkgrid-color-links a [data-darkgrid-svg-stroke] { stroke: var(--darkgrid-accent) !important; }
+
+/* Darkgrid deliberately has no img/video/canvas/iframe filter, opacity, blend,
+   backdrop-filter, or overlay rule. Media keeps the website's original pixels
+   and original presentation properties. */
+
+html.darkgrid-on ::selection { color: #000 !important; background: var(--darkgrid-accent) !important; }
+
+/* Edge glow is a background-level inset shadow, not a high-z-index overlay. */
+html.darkgrid-on.darkgrid-glow,
+html.darkgrid-on.darkgrid-glow body {
+  box-shadow: inset 0 0 28px rgba(var(--darkgrid-accent-rgb), .28), inset 0 0 72px rgba(var(--darkgrid-accent-rgb), .14) !important;
 }
 
-/* Optional all-text accent mode. */
-html.darkgrid-on.darkgrid-color-text :where(
-  h1, h2, h3, h4, h5, h6,
-  p, span, label, legend,
-  li, dt, dd, blockquote,
-  td, th, caption,
-  small, strong, em, code, pre,
-  a, a:visited,
-  button, input, textarea, select, option
-) {
-  color: var(--darkgrid-accent) !important;
-}
-
-/* Media is deliberately outside the frost/surface system. No filters, opacity,
-   blend modes, or translucent overlays are applied above these pixels. */
-html.darkgrid-on :where(img, video, canvas, picture, iframe, object, embed, svg) {
-  filter: none !important;
-  -webkit-filter: none !important;
-  opacity: 1 !important;
-  mix-blend-mode: normal !important;
-}
-
-html.darkgrid-on ::selection {
-  color: #000 !important;
-  background: var(--darkgrid-accent) !important;
-}
-
-/* Edge glow remains an explicit optional effect. Unlike the removed frost
-   overlay, this is only a viewport-edge vignette. */
-html.darkgrid-on.darkgrid-glow::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 2147483646;
-  pointer-events: none;
-  box-shadow:
-    inset 0 0 24px rgba(var(--darkgrid-accent-rgb), 0.34),
-    inset 0 0 68px rgba(var(--darkgrid-accent-rgb), 0.18);
-}
-
-html.darkgrid-on ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-html.darkgrid-on ::-webkit-scrollbar-track {
-  background: #000;
-}
-
-html.darkgrid-on ::-webkit-scrollbar-thumb {
-  background: #292929;
-  border: 2px solid #000;
-  border-radius: 999px;
-}
-
-html.darkgrid-on ::-webkit-scrollbar-thumb:hover {
-  background: var(--darkgrid-accent);
-}
+html.darkgrid-on ::-webkit-scrollbar { width: 10px; height: 10px; }
+html.darkgrid-on ::-webkit-scrollbar-track { background: #000; }
+html.darkgrid-on ::-webkit-scrollbar-thumb { background: #292929; border: 2px solid #000; border-radius: 999px; }
+html.darkgrid-on ::-webkit-scrollbar-thumb:hover { background: var(--darkgrid-accent); }
 
 @media print {
   html.darkgrid-on,
@@ -181,13 +129,12 @@ html.darkgrid-on ::-webkit-scrollbar-thumb:hover {
     color-scheme: normal !important;
     background: initial !important;
     color: initial !important;
+    box-shadow: none !important;
   }
-
-  html.darkgrid-on [data-darkgrid-surface] {
-    background: initial !important;
-  }
-
-  html.darkgrid-on.darkgrid-glow::after {
-    display: none !important;
-  }
+  html.darkgrid-on [data-darkgrid-surface],
+  html.darkgrid-on [data-darkgrid-before-surface]::before,
+  html.darkgrid-on [data-darkgrid-after-surface]::after { background: initial !important; }
+  html.darkgrid-on [data-darkgrid-shadow],
+  html.darkgrid-on [data-darkgrid-before-shadow]::before,
+  html.darkgrid-on [data-darkgrid-after-shadow]::after { box-shadow: initial !important; }
 }
