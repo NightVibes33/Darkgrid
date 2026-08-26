@@ -14,11 +14,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Validate manifest and feature wiring
+
+      - name: Validate extension wiring
         run: node Tests/validate_extension.mjs
-      - name: Test opaque surface engine
+
+      - name: Test rendering primitives
         run: node Tests/surface_engine_test.mjs
-      - name: Syntax-check extension scripts
+
+      - name: Browser integration (WebKit)
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps webkit
+          node Tests/browser_integration.mjs
+
+      - name: Syntax-check JavaScript
         run: |
           node --check SafariExtension/Resources/background.js
           node --check SafariExtension/Resources/surface-engine.js
@@ -26,10 +35,17 @@ jobs:
           node --check SafariExtension/Resources/popup.js
 
   build-ios:
-    runs-on: macos-15
+    runs-on: macos-26
     needs: validate-extension
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require current App Store SDK
+        run: |
+          xcodebuild -version
+          SDK="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iPhoneOS SDK: $SDK"
+          test "${SDK%%.*}" -ge 26
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -37,29 +53,49 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Validate source manifests and property lists
+      - name: Validate source metadata and icon
         run: |
           plutil -lint App/Info.plist
           plutil -lint SafariExtension/Info.plist
           python3 -m json.tool SafariExtension/Resources/manifest.json >/dev/null
+          python3 -m json.tool App/Assets.xcassets/Contents.json >/dev/null
+          python3 -m json.tool App/Assets.xcassets/AppIcon.appiconset/Contents.json >/dev/null
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" SafariExtension/Info.plist | grep -Fx "com.apple.Safari.web-extension"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" SafariExtension/Info.plist | grep -F "SafariWebExtensionHandler"
+          ICON="App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+          test -f "$ICON"
+          test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
+          test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
+
+      - name: Analyze iOS targets
+        run: |
+          xcodebuild \
+            -project Darkgrid.xcodeproj \
+            -scheme Darkgrid \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build-analyze \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            analyze
 
       - name: Build unsigned iOS app
         run: |
-          set -o pipefail
           xcodebuild \
             -project Darkgrid.xcodeproj \
             -scheme Darkgrid \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build | xcpretty
+            build
 
-      - name: Validate built app extension
+      - name: Validate compiled app extension
         run: |
           APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
           EXT="$APP/PlugIns/DarkgridExtension.appex"
@@ -69,27 +105,32 @@ jobs:
           plutil -lint "$EXT/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" "$EXT/Info.plist" | grep -F "SafariWebExtensionHandler"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Info.plist" | grep -Fx "1.1.0"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Info.plist" | grep -Fx "$GITHUB_RUN_NUMBER"
           for file in manifest.json background.js surface-engine.js content.js popup.html popup.css popup.js theme.css; do
-            test -f "$EXT/$file" || { echo "Missing Safari web extension resource: $file"; find "$EXT" -maxdepth 2 -print; exit 1; }
+            test -f "$EXT/$file" || { echo "Missing extension resource: $file"; exit 1; }
           done
           python3 -m json.tool "$EXT/manifest.json" >/dev/null
-          grep -F 'surface-engine.js' "$EXT/manifest.json"
-          ! grep -E 'darkgrid-frost::before|mix-blend-mode:[[:space:]]*screen|backdrop-filter[[:space:]]*:' "$EXT/theme.css"
-          ! grep -Ei 'background-color:[[:space:]]*transparent[[:space:]]*!important' "$EXT/theme.css"
+          grep -F '"all_frames": true' "$EXT/manifest.json"
+          grep -F '"match_about_blank": true' "$EXT/manifest.json"
+          ! grep -E 'darkgrid-(frost|glow)::(before|after)|backdrop-filter[[:space:]]*:|mix-blend-mode:[[:space:]]*screen' "$EXT/theme.css"
+          ! grep -E ':where\(img,[[:space:]]*video,[[:space:]]*canvas,[[:space:]]*picture,[[:space:]]*iframe,[[:space:]]*object,[[:space:]]*embed\)' "$EXT/theme.css"
 
-      - name: Package unsigned IPA
+      - name: Package and revalidate unsigned IPA
         run: |
           APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
-          rm -rf Payload Darkgrid-unsigned.ipa
+          rm -rf Payload verify-ipa Darkgrid-unsigned.ipa
           mkdir Payload
           cp -R "$APP" Payload/
           zip -qry Darkgrid-unsigned.ipa Payload
-          rm -rf verify-ipa
           mkdir verify-ipa
           unzip -q Darkgrid-unsigned.ipa -d verify-ipa
-          EXT="verify-ipa/Payload/Darkgrid.app/PlugIns/DarkgridExtension.appex"
+          PACKAGED_APP="verify-ipa/Payload/Darkgrid.app"
+          EXT="$PACKAGED_APP/PlugIns/DarkgridExtension.appex"
+          test -d "$EXT"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
-          for file in manifest.json surface-engine.js content.js theme.css; do
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$PACKAGED_APP/Info.plist" | grep -Fx "$GITHUB_RUN_NUMBER"
+          for file in manifest.json surface-engine.js content.js theme.css popup.html popup.js; do
             test -f "$EXT/$file"
           done
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Darkgrid",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "True-black neon dark mode for Safari.",
   "permissions": [
     "storage",
@@ -23,7 +23,8 @@
       "css": ["theme.css"],
       "js": ["surface-engine.js", "content.js"],
       "run_at": "document_start",
-      "all_frames": false
+      "all_frames": true,
+      "match_about_blank": true
     }
   ]
 }
