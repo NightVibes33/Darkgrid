@@ -18,15 +18,33 @@
   ]);
 
   const MANAGED_ATTRIBUTES = [
-    "data-darkgrid-surface", "data-darkgrid-gradient", "data-darkgrid-border",
-    "data-darkgrid-text", "data-darkgrid-shadow", "data-darkgrid-before-surface",
-    "data-darkgrid-after-surface", "data-darkgrid-before-text", "data-darkgrid-after-text"
+    "data-darkgrid-surface",
+    "data-darkgrid-gradient",
+    "data-darkgrid-border",
+    "data-darkgrid-text",
+    "data-darkgrid-shadow",
+    "data-darkgrid-before-surface",
+    "data-darkgrid-after-surface",
+    "data-darkgrid-before-gradient",
+    "data-darkgrid-after-gradient",
+    "data-darkgrid-before-shadow",
+    "data-darkgrid-after-shadow",
+    "data-darkgrid-before-text",
+    "data-darkgrid-after-text"
   ];
 
   const MANAGED_PROPERTIES = [
-    "--darkgrid-surface-normal", "--darkgrid-surface-frost", "--darkgrid-box-shadow",
-    "--darkgrid-before-normal", "--darkgrid-before-frost", "--darkgrid-before-text",
-    "--darkgrid-after-normal", "--darkgrid-after-frost", "--darkgrid-after-text"
+    "--darkgrid-surface-normal",
+    "--darkgrid-surface-frost",
+    "--darkgrid-box-shadow",
+    "--darkgrid-before-normal",
+    "--darkgrid-before-frost",
+    "--darkgrid-before-shadow",
+    "--darkgrid-before-text",
+    "--darkgrid-after-normal",
+    "--darkgrid-after-frost",
+    "--darkgrid-after-shadow",
+    "--darkgrid-after-text"
   ];
 
   const SHADOW_STYLE = `
@@ -39,7 +57,7 @@
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]) [data-darkgrid-text]{color:var(--darkgrid-accent)!important}
 :host([data-darkgrid-shadow-on]) a{color:#e7e7e7!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-links]) a{color:var(--darkgrid-accent)!important}
-:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a{color:#e7e7e7!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links])) a{color:#e7e7e7!important;text-shadow:none!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-border]{border-color:#343434!important;outline-color:#343434!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-borders]) [data-darkgrid-border]{border-color:rgba(var(--darkgrid-accent-rgb),.5)!important;outline-color:rgba(var(--darkgrid-accent-rgb),.58)!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-shadow]{box-shadow:var(--darkgrid-box-shadow)!important}
@@ -47,12 +65,18 @@
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-frost]) [data-darkgrid-before-surface]::before{background-color:var(--darkgrid-before-frost)!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-after-surface]::after{background-color:var(--darkgrid-after-normal)!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-frost]) [data-darkgrid-after-surface]::after{background-color:var(--darkgrid-after-frost)!important}
+:host([data-darkgrid-shadow-on]) [data-darkgrid-before-gradient]::before,
+:host([data-darkgrid-shadow-on]) [data-darkgrid-after-gradient]::after{background-blend-mode:multiply!important}
+:host([data-darkgrid-shadow-on]) [data-darkgrid-before-shadow]::before{box-shadow:var(--darkgrid-before-shadow)!important}
+:host([data-darkgrid-shadow-on]) [data-darkgrid-after-shadow]::after{box-shadow:var(--darkgrid-after-shadow)!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-before-text]::before{color:var(--darkgrid-before-text)!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-after-text]::after{color:var(--darkgrid-after-text)!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]) [data-darkgrid-before-text]::before,
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]) [data-darkgrid-after-text]::after{color:var(--darkgrid-accent)!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-svg-fill]{fill:#dcdcdc!important}
 :host([data-darkgrid-shadow-on]) [data-darkgrid-svg-stroke]{stroke:#dcdcdc!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-links]) a [data-darkgrid-svg-fill]{fill:var(--darkgrid-accent)!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-links]) a [data-darkgrid-svg-stroke]{stroke:var(--darkgrid-accent)!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]) input::placeholder,
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]) textarea::placeholder{color:var(--darkgrid-accent)!important}
 `;
@@ -68,6 +92,7 @@
   let wasEnabled = false;
   let lastAccentHex = "";
   let waitingForRoot = false;
+  let lifecycleHooksInstalled = false;
 
   function normalizeHost(value) {
     return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
@@ -76,30 +101,26 @@
   function isExcludedHost(value, entries) {
     const current = normalizeHost(value);
     if (!current) return false;
-    return (entries || []).map(normalizeHost).filter(Boolean).some(entry => {
-      if (entry.startsWith("*.")) {
-        const base = entry.slice(2);
-        return current === base || current.endsWith(`.${base}`);
-      }
-      return current === entry;
-    });
+    return (entries || []).map(normalizeHost).filter(Boolean).some(entry => current === entry);
   }
 
   function frameHostnames() {
     const hosts = new Set();
     const own = normalizeHost(location.hostname);
     if (own) hosts.add(own);
+
     try {
       for (const origin of Array.from(location.ancestorOrigins || [])) {
         const candidate = normalizeHost(new URL(origin).hostname);
         if (candidate) hosts.add(candidate);
       }
     } catch {}
-    return [...hosts];
+
+    return Array.from(hosts);
   }
 
   function pageIsExcluded(entries) {
-    return frameHostnames().some(item => isExcludedHost(item, entries));
+    return frameHostnames().some(host => isExcludedHost(host, entries));
   }
 
   function normalizeHex(value) {
@@ -111,18 +132,23 @@
   function hexToRgb(value) {
     const hex = normalizeHex(value).slice(1);
     return {
-      r: parseInt(hex.slice(0, 2), 16),
-      g: parseInt(hex.slice(2, 4), 16),
-      b: parseInt(hex.slice(4, 6), 16)
+      r: Number.parseInt(hex.slice(0, 2), 16),
+      g: Number.parseInt(hex.slice(2, 4), 16),
+      b: Number.parseInt(hex.slice(4, 6), 16)
     };
   }
 
   function stripManagedStyle(value) {
     const probe = document.createElement("div");
     if (value) probe.setAttribute("style", value);
-    for (const name of [...probe.style]) {
-      if (name.startsWith("--darkgrid-")) probe.style.removeProperty(name);
+
+    // Avoid relying on CSSStyleDeclaration iteration, which is inconsistent on
+    // older Safari versions still supported by the iOS 15 deployment target.
+    for (let index = probe.style.length - 1; index >= 0; index -= 1) {
+      const name = probe.style.item(index);
+      if (name && name.startsWith("--darkgrid-")) probe.style.removeProperty(name);
     }
+
     return (probe.getAttribute("style") || "").trim();
   }
 
@@ -136,12 +162,19 @@
   }
 
   function mutationIsInternal(mutation) {
-    if (mutation.attributeName === "style") {
-      return stripManagedStyle(mutation.oldValue) === stripManagedStyle(mutation.target.getAttribute("style"));
+    const name = String(mutation.attributeName || "");
+    if (name.startsWith("data-darkgrid-")) return true;
+
+    if (name === "style") {
+      return stripManagedStyle(mutation.oldValue)
+        === stripManagedStyle(mutation.target.getAttribute("style"));
     }
-    if (mutation.attributeName === "class") {
-      return stripManagedClass(mutation.oldValue) === stripManagedClass(mutation.target.getAttribute("class"));
+
+    if (name === "class") {
+      return stripManagedClass(mutation.oldValue)
+        === stripManagedClass(mutation.target.getAttribute("class"));
     }
+
     return false;
   }
 
@@ -168,18 +201,31 @@
 
   function mapPseudoElement(element, prefix, pseudo) {
     let style;
-    try { style = getComputedStyle(element, pseudo); } catch { return; }
+    try {
+      style = getComputedStyle(element, pseudo);
+    } catch {
+      return;
+    }
+
     if (!Engine.pseudoIsRenderable(style)) return;
 
     const backgroundImage = String(style.backgroundImage || "none");
-    if (!Engine.hasRasterBackground(backgroundImage)) {
-      const background = Engine.parseCssColor(style.backgroundColor);
-      if (background && background.a > 0.02) {
-        const mapped = Engine.buildSurfaceColors(background, accent);
-        setPropertyIfNeeded(element, `--darkgrid-${prefix}-normal`, mapped.normal);
-        setPropertyIfNeeded(element, `--darkgrid-${prefix}-frost`, mapped.frost);
-        setAttributeIfNeeded(element, `data-darkgrid-${prefix}-surface`);
-      }
+    const hasRaster = Engine.hasRasterBackground(backgroundImage);
+    const hasGradient = Engine.hasGradientBackground(backgroundImage) && !hasRaster;
+    const background = Engine.parseCssColor(style.backgroundColor);
+
+    if (!hasRaster && background && background.a > 0.02) {
+      const mapped = Engine.buildSurfaceColors(background, accent);
+      setPropertyIfNeeded(element, `--darkgrid-${prefix}-normal`, mapped.normal);
+      setPropertyIfNeeded(element, `--darkgrid-${prefix}-frost`, mapped.frost);
+      setAttributeIfNeeded(element, `data-darkgrid-${prefix}-surface`);
+      if (hasGradient) setAttributeIfNeeded(element, `data-darkgrid-${prefix}-gradient`);
+    } else if (!hasRaster && hasGradient) {
+      const mapped = Engine.buildSurfaceColors({ r: 160, g: 160, b: 160, a: 1 }, accent);
+      setPropertyIfNeeded(element, `--darkgrid-${prefix}-normal`, mapped.normal);
+      setPropertyIfNeeded(element, `--darkgrid-${prefix}-frost`, mapped.frost);
+      setAttributeIfNeeded(element, `data-darkgrid-${prefix}-surface`);
+      setAttributeIfNeeded(element, `data-darkgrid-${prefix}-gradient`);
     }
 
     const foreground = Engine.parseCssColor(style.color);
@@ -187,10 +233,16 @@
       setPropertyIfNeeded(element, `--darkgrid-${prefix}-text`, Engine.buildForegroundColor(foreground));
       setAttributeIfNeeded(element, `data-darkgrid-${prefix}-text`);
     }
+
+    const shadow = Engine.rewriteBoxShadow(style.boxShadow);
+    if (shadow) {
+      setPropertyIfNeeded(element, `--darkgrid-${prefix}-shadow`, shadow);
+      setAttributeIfNeeded(element, `data-darkgrid-${prefix}-shadow`);
+    }
   }
 
   function mapSvg(svg) {
-    const shapes = [...svg.querySelectorAll("path,rect,circle,ellipse,line,polyline,polygon")];
+    const shapes = Array.from(svg.querySelectorAll("path,rect,circle,ellipse,line,polyline,polygon"));
     for (const shape of shapes) {
       removeAttributeIfPresent(shape, "data-darkgrid-svg-fill");
       removeAttributeIfPresent(shape, "data-darkgrid-svg-stroke");
@@ -202,6 +254,7 @@
       const style = getComputedStyle(shape);
       const fill = Engine.parseCssColor(style.fill);
       const stroke = Engine.parseCssColor(style.stroke);
+
       if (fill && fill.a > 0.02 && Engine.relativeLuminance(fill) < 0.52) {
         setAttributeIfNeeded(shape, "data-darkgrid-svg-fill");
       }
@@ -219,6 +272,7 @@
       "data-darkgrid-shadow-color-borders": enabledNow && Boolean(settings.colorBorders),
       "data-darkgrid-shadow-color-text": enabledNow && Boolean(settings.colorAllText)
     };
+
     for (const [name, active] of Object.entries(state)) {
       if (active) setAttributeIfNeeded(host, name);
       else removeAttributeIfPresent(host, name);
@@ -234,9 +288,11 @@
   }
 
   function inspectElement(element) {
-    if (!(element instanceof Element) || element === document.documentElement || element === document.body) return;
+    if (!(element instanceof Element)
+      || element === document.documentElement
+      || element === document.body) return;
 
-    // SVG paint nodes are managed by their owning SVG as a single artwork/icon unit.
+    // SVG paint nodes are handled by the owning SVG as one icon/artwork unit.
     if (element.ownerSVGElement) return;
 
     if (SKIP_TAGS.has(element.tagName) || Engine.isMediaElement(element)) {
@@ -254,6 +310,8 @@
     const hasGradient = Engine.hasGradientBackground(backgroundImage) && !hasRaster;
     const background = Engine.parseCssColor(style.backgroundColor);
 
+    // Raster backgrounds are never put into the frost/surface system. Their
+    // pixels remain exactly under site control.
     if (!hasRaster && background && background.a > 0.02) {
       const mapped = Engine.buildSurfaceColors(background, accent);
       setPropertyIfNeeded(element, "--darkgrid-surface-normal", mapped.normal);
@@ -295,7 +353,9 @@
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode(node) {
-        if (SKIP_TAGS.has(node.tagName) || Engine.isMediaElement(node)) return NodeFilter.FILTER_REJECT;
+        if (SKIP_TAGS.has(node.tagName) || Engine.isMediaElement(node)) {
+          return NodeFilter.FILTER_REJECT;
+        }
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -309,22 +369,36 @@
 
   function containsRoot(container, candidate) {
     if (container === candidate) return true;
-    try { return Boolean(container.contains?.(candidate)); } catch { return false; }
+    try {
+      return Boolean(container.contains?.(candidate));
+    } catch {
+      return false;
+    }
   }
 
   function queueScan(root) {
     if (!root) return;
-    for (const queued of [...pendingRoots]) {
+
+    for (const queued of Array.from(pendingRoots)) {
       if (containsRoot(queued, root)) return;
       if (containsRoot(root, queued)) pendingRoots.delete(queued);
     }
+
     pendingRoots.add(root);
     if (!scanFrame) scanFrame = requestAnimationFrame(flushScans);
   }
 
+  function pruneShadowHosts() {
+    for (const host of Array.from(shadowHosts)) {
+      if (!host.isConnected) shadowHosts.delete(host);
+    }
+  }
+
   function flushScans() {
     scanFrame = 0;
-    const roots = [...pendingRoots];
+    pruneShadowHosts();
+
+    const roots = Array.from(pendingRoots);
     pendingRoots.clear();
     for (const root of roots) {
       if (root?.isConnected !== false) scanSubtree(root);
@@ -339,12 +413,14 @@
 
   function observeRoot(root) {
     if (!observer || !root || observedRoots.has(root)) return;
+
+    // Observe all attributes. Modern sites frequently drive CSS through
+    // data-theme/data-state/aria-selected/etc., not just class/style.
     observer.observe(root, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeOldValue: true,
-      attributeFilter: ["class", "style", "hidden", "open", "aria-expanded"],
       characterData: true
     });
     observedRoots.add(root);
@@ -357,8 +433,11 @@
           if (mutation.type === "childList") {
             let needsParentScan = mutation.removedNodes.length > 0;
             for (const node of mutation.addedNodes) {
-              if (node.nodeType === Node.ELEMENT_NODE) queueScan(normalizeMutationTarget(node));
-              else if (node.nodeType === Node.TEXT_NODE && String(node.nodeValue || "").trim()) needsParentScan = true;
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                queueScan(normalizeMutationTarget(node));
+              } else if (node.nodeType === Node.TEXT_NODE && String(node.nodeValue || "").trim()) {
+                needsParentScan = true;
+              }
             }
             if (needsParentScan) queueScan(normalizeMutationTarget(mutation.target));
           } else if (mutation.type === "characterData") {
@@ -369,6 +448,7 @@
         }
       });
     }
+
     observeRoot(document.documentElement);
   }
 
@@ -383,10 +463,24 @@
   }
 
   function syncAllShadowHosts() {
-    for (const host of [...shadowHosts]) {
-      if (host.isConnected) syncShadowHost(host);
-      else shadowHosts.delete(host);
-    }
+    pruneShadowHosts();
+    for (const host of Array.from(shadowHosts)) syncShadowHost(host);
+  }
+
+  function installLifecycleHooks() {
+    if (lifecycleHooksInstalled) return;
+    lifecycleHooksInstalled = true;
+
+    const rescan = () => {
+      if (enabledNow && document.documentElement) queueScan(document.documentElement);
+    };
+
+    document.addEventListener("DOMContentLoaded", rescan, { once: true });
+    window.addEventListener("load", rescan, { once: true });
+    window.addEventListener("pageshow", event => {
+      if (event.persisted) void applySettings();
+      else rescan();
+    });
   }
 
   async function applySettings() {
@@ -405,6 +499,8 @@
       }
       return;
     }
+
+    installLifecycleHooks();
 
     accent = Engine.ensureReadableAccent(hexToRgb(settings.accentColor));
     const accentHex = Engine.rgbToHex(accent);
