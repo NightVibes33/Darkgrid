@@ -26,6 +26,14 @@ assert.deepEqual(
   JSON.parse(JSON.stringify(engine.parseCssColor("rgba(10, 20, 30, 0.5)"))),
   { r: 10, g: 20, b: 30, a: 0.5 }
 );
+assert.deepEqual(
+  JSON.parse(JSON.stringify(engine.parseCssColor("rgb(100% 50% 0% / 25%)"))),
+  { r: 255, g: 128, b: 0, a: 0.25 }
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(engine.parseCssColor("color(display-p3 1 0.5 0 / 0.8)"))),
+  { r: 255, g: 128, b: 0, a: 0.8 }
+);
 assert.equal(engine.parseCssColor("transparent"), null);
 
 const green = { r: 0, g: 255, b: 102 };
