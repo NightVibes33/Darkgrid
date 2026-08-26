@@ -13,6 +13,7 @@ await page.setContent(`<!doctype html><html class="mode-light"><head><style>
 .alpha{background:rgba(255,255,255,.1)}
 .pseudo::before{content:"x";background:#fff;color:#000;box-shadow:0 0 8px rgba(255,255,255,.8)}
 .pseudoGradient::before{content:"";display:block;width:10px;height:10px;background:linear-gradient(#fff,#aaa)}
+.linkPseudo::before{content:"p"}
 .mode-light #rootcard{background:#fff}.mode-dark #rootcard{background:#191919}
 #attrHost[data-state="light"] #attrcard{background:#fff}
 #attrHost[data-state="dark"] #attrcard{background:#242424}
@@ -24,11 +25,14 @@ await page.setContent(`<!doctype html><html class="mode-light"><head><style>
 <div id="rootcard">root</div>
 <div id="attrHost" data-state="light"><div id="attrcard">attribute driven</div></div>
 <div id="dynamic" style="background:#fff">dyn</div>
+<div id="sheetcard">stylesheet driven</div>
 <div id="transparentBorder" style="border:1px solid transparent">border</div>
 <div id="photo" style="background-image:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');background-color:#fff">photo</div>
 <img id="media" alt="pixel" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" style="opacity:.4;filter:grayscale(1);mix-blend-mode:multiply">
 <div id="newtext"></div>
 <a id="link" href="#">link</a>
+<a id="nestedLink" href="#"><span id="nestedLinkText">nested link</span></a>
+<a id="linkPseudo" class="linkPseudo" href="#">pseudo link</a>
 <div id="shadow"></div>
 <svg id="icon" width="10" height="10"><path d="M0 0h10v10H0z" fill="#000"/></svg>
 </body></html>`);
@@ -56,8 +60,13 @@ await page.evaluate(() => {
     runtime: { onMessage: { addListener: () => {} } }
   };
 
-  document.querySelector('#shadow').attachShadow({ mode: 'open' }).innerHTML =
-    '<style>.card{background:#fff;color:#000}.card::before{content:"s";background:#fff}</style><div class="card">shadow text</div>';
+  document.querySelector('#shadow').attachShadow({ mode: 'open' }).innerHTML = `
+    <style>
+      .card{background:#fff;color:#000}
+      .card::before{content:"s";background:#fff}
+    </style>
+    <div class="card">shadow text</div>
+    <a id="shadowLink" href="#"><span id="shadowLinkText">shadow nested link</span></a>`;
 });
 
 await page.addStyleTag({ path: path.join(resources, 'theme.css') });
@@ -80,9 +89,12 @@ const initial = await page.evaluate(() => ({
   shadow: getComputedStyle(document.querySelector('#shadow').shadowRoot.querySelector('.card')).backgroundColor,
   shadowPseudo: getComputedStyle(document.querySelector('#shadow').shadowRoot.querySelector('.card'), '::before').backgroundColor,
   shadowStyle: Boolean(document.querySelector('#shadow').shadowRoot.querySelector('style[data-darkgrid-shadow-style]')),
+  shadowNestedLink: getComputedStyle(document.querySelector('#shadow').shadowRoot.querySelector('#shadowLinkText')).color,
   svg: getComputedStyle(document.querySelector('#icon path')).fill,
   svgManaged: document.querySelector('#icon path').hasAttribute('data-darkgrid-svg-fill'),
   link: getComputedStyle(document.querySelector('#link')).color,
+  nestedLink: getComputedStyle(document.querySelector('#nestedLinkText')).color,
+  linkPseudo: getComputedStyle(document.querySelector('#linkPseudo'), '::before').color,
   photoMapped: document.querySelector('#photo').hasAttribute('data-darkgrid-surface'),
   transparentBorderMapped: document.querySelector('#transparentBorder').hasAttribute('data-darkgrid-border'),
   glowPseudo: getComputedStyle(document.documentElement, '::after').content,
@@ -106,6 +118,9 @@ assert.equal(initial.shadowStyle, true);
 assert.notEqual(initial.svg, 'rgb(0, 0, 0)', 'simple dark SVG UI icons must remain visible');
 assert.equal(initial.svgManaged, true, 'SVG paint repair must survive the full tree scan');
 assert.notEqual(initial.link, 'rgb(0, 255, 102)', 'Color Links OFF must override Color All Text ON');
+assert.notEqual(initial.nestedLink, 'rgb(0, 255, 102)', 'nested link text must respect Color Links OFF');
+assert.notEqual(initial.linkPseudo, 'rgb(0, 255, 102)', 'link pseudo text must respect Color Links OFF');
+assert.notEqual(initial.shadowNestedLink, 'rgb(0, 255, 102)', 'Shadow DOM nested link text must respect Color Links OFF');
 assert.equal(initial.photoMapped, false, 'raster background pixels must not be frosted');
 assert.equal(initial.transparentBorderMapped, false, 'transparent borders must remain invisible');
 assert.ok(initial.glowPseudo === 'none' || initial.glowPseudo === 'normal', 'edge glow must not be a viewport overlay');
@@ -138,6 +153,33 @@ await page.evaluate(() => {
 await page.waitForFunction(previous =>
   getComputedStyle(document.querySelector('#attrcard')).backgroundColor !== previous,
   initial.attrcard
+);
+
+await page.evaluate(() => {
+  const style = document.createElement('style');
+  style.id = 'runtimeStyles';
+  style.textContent = '#sheetcard{background:#fff}';
+  document.head.append(style);
+});
+await page.waitForFunction(() =>
+  document.querySelector('#sheetcard').hasAttribute('data-darkgrid-surface')
+  && getComputedStyle(document.querySelector('#sheetcard')).backgroundColor !== 'rgb(255, 255, 255)'
+);
+const firstSheetColor = await page.$eval('#sheetcard', element => getComputedStyle(element).backgroundColor);
+
+await page.evaluate(() => {
+  document.querySelector('#runtimeStyles').textContent = '#sheetcard{background:#444}';
+});
+await page.waitForFunction(previous =>
+  getComputedStyle(document.querySelector('#sheetcard')).backgroundColor !== previous,
+  firstSheetColor
+);
+
+await page.evaluate(() => {
+  document.querySelector('#shadow').shadowRoot.querySelector('style[data-darkgrid-shadow-style]').remove();
+});
+await page.waitForFunction(() =>
+  Boolean(document.querySelector('#shadow').shadowRoot.querySelector('style[data-darkgrid-shadow-style]'))
 );
 
 await page.evaluate(() => {
