@@ -1,64 +1,20 @@
 # Darkgrid
 
-Darkgrid is a native iOS/iPadOS Safari Web Extension that turns Safari pages into a true-black OLED theme with configurable neon accents.
+Darkgrid is an iOS/iPadOS Safari Web Extension that converts web UI to true-black OLED surfaces with optional neon frost, accents, borders, text, and edge glow.
 
-## Features
+## Rendering guarantees
+- Frost is applied to CSS surfaces, never as a full-screen overlay above media.
+- Existing surface alpha is preserved.
+- Raster images, video, canvas, embedded media, and raster CSS backgrounds are not recolored.
+- Open Shadow DOM, pseudo-elements, dynamic style/class changes, and subframes are handled.
+- Simple monochrome SVG UI icons are repaired for dark backgrounds; complex/color artwork is preserved.
+- Site exclusions are exact-host by default; wildcard entries such as `*.example.com` remain supported internally.
+- Custom accent colors are automatically lifted when too dark to remain readable.
 
-- True-black webpage theme
-- Cyan, red, green, and purple neon presets
-- Custom color picker and hex entry
-- Edge-glow mode
-- Master theme toggle
-- Per-site exclusions
-- Instant setting changes without a page reload
-- Local-only `browser.storage.local` settings
-- No account, backend, analytics, or tracking
+## Controls
+Master enable, Cyan/Red/Green/Purple/custom accent, Frost Tint, Color Links, Color Borders, Color All Text, Edge Glow, and exact current-site exclusion. Settings stay local in `browser.storage.local`.
 
-## Permission model
+## Build / QA
+CI validates pure rendering logic, runs a real WebKit browser integration suite, builds with the current iOS SDK on `macos-26`, validates the compiled Safari extension, assigns a unique build number from the Actions run, and packages an unsigned IPA.
 
-Darkgrid does **not** show its own permission popup on every website. Safari controls website access. After installing the app, enable the extension and grant it access to all websites once in Safari settings. Darkgrid then runs automatically on allowed pages until the user disables it or excludes a domain.
-
-## Architecture
-
-```text
-Darkgrid iOS app
-└── Darkgrid Safari Web Extension
-    ├── manifest.json
-    ├── background.js
-    ├── content.js
-    ├── theme.css
-    ├── popup.html
-    ├── popup.css
-    └── popup.js
-```
-
-The native app is intentionally small. It reports whether the Safari extension is enabled and explains the one-time Safari setup. Theme controls live in the Safari extension popup.
-
-## Build
-
-The repository uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) so the project file is reproducible.
-
-```bash
-brew install xcodegen
-xcodegen generate
-xcodebuild \
-  -project Darkgrid.xcodeproj \
-  -scheme Darkgrid \
-  -configuration Release \
-  -sdk iphoneos \
-  CODE_SIGNING_ALLOWED=NO \
-  CODE_SIGNING_REQUIRED=NO \
-  -derivedDataPath build
-```
-
-GitHub Actions performs extension validation, generates the Xcode project, builds the iOS application, and packages an unsigned IPA artifact.
-
-## Bundle identifiers
-
-- App: `com.nightvibes33.Darkgrid`
-- Safari extension: `com.nightvibes33.Darkgrid.Extension`
-
-## Minimum OS
-
-- iOS 15.0+
-- iPadOS 15.0+
+Bundle IDs: `com.nightvibes33.Darkgrid` and `com.nightvibes33.Darkgrid.Extension`. Minimum iOS/iPadOS: 15.0.
