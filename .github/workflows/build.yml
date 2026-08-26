@@ -34,11 +34,13 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Validate manifests and property lists
+      - name: Validate source manifests and property lists
         run: |
           plutil -lint App/Info.plist
           plutil -lint SafariExtension/Info.plist
           python3 -m json.tool SafariExtension/Resources/manifest.json >/dev/null
+          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" SafariExtension/Info.plist | grep -Fx "com.apple.Safari.web-extension"
+          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" SafariExtension/Info.plist | grep -F "SafariWebExtensionHandler"
 
       - name: Build unsigned iOS app
         run: |
@@ -54,14 +56,34 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build | xcpretty
 
+      - name: Validate built app extension
+        run: |
+          APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
+          EXT="$APP/PlugIns/DarkgridExtension.appex"
+          test -d "$APP"
+          test -d "$EXT"
+          plutil -lint "$APP/Info.plist"
+          plutil -lint "$EXT/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
+          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" "$EXT/Info.plist" | grep -F "SafariWebExtensionHandler"
+          for file in manifest.json background.js content.js popup.html popup.css popup.js theme.css; do
+            test -f "$EXT/$file" || { echo "Missing Safari web extension resource: $file"; find "$EXT" -maxdepth 2 -print; exit 1; }
+          done
+          python3 -m json.tool "$EXT/manifest.json" >/dev/null
+
       - name: Package unsigned IPA
         run: |
           APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
-          test -d "$APP"
           rm -rf Payload Darkgrid-unsigned.ipa
           mkdir Payload
           cp -R "$APP" Payload/
           zip -qry Darkgrid-unsigned.ipa Payload
+          rm -rf verify-ipa
+          mkdir verify-ipa
+          unzip -q Darkgrid-unsigned.ipa -d verify-ipa
+          EXT="verify-ipa/Payload/Darkgrid.app/PlugIns/DarkgridExtension.appex"
+          /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$EXT/Info.plist" | grep -Fx "com.apple.Safari.web-extension"
+          test -f "$EXT/manifest.json"
 
       - uses: actions/upload-artifact@v4
         with:
