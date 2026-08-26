@@ -1,9 +1,6 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var extensionState = ExtensionStateModel()
-    @Environment(\.scenePhase) private var scenePhase
-
     private let neon = Color(red: 0.0, green: 0.96, blue: 1.0)
 
     var body: some View {
@@ -13,7 +10,7 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     header
-                    statusCard
+                    extensionCard
                     setupCard
                     footer
                 }
@@ -22,12 +19,6 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear(perform: extensionState.refresh)
-        .onChange(of: scenePhase) { phase in
-            if phase == .active {
-                extensionState.refresh()
-            }
-        }
     }
 
     private var header: some View {
@@ -59,38 +50,24 @@ struct ContentView: View {
         }
     }
 
-    private var statusCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var extensionCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(statusColor)
+                    .fill(neon)
                     .frame(width: 10, height: 10)
-                    .shadow(color: statusColor.opacity(0.8), radius: 8)
+                    .shadow(color: neon.opacity(0.8), radius: 8)
 
-                Text(statusTitle)
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                Text("SAFARI EXTENSION INCLUDED")
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
 
                 Spacer()
             }
 
-            Text(statusDetail)
+            Text("Darkgrid installs its Safari Web Extension with this app. Enable it once in Safari settings, then use its Safari extension panel for theme controls.")
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Button(action: extensionState.refresh) {
-                Text("REFRESH STATUS")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(neon.opacity(0.12))
-                    .foregroundColor(neon)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(neon.opacity(0.6), lineWidth: 1)
-                    )
-                    .cornerRadius(10)
-            }
         }
         .padding(18)
         .background(Color.white.opacity(0.045))
@@ -115,7 +92,7 @@ struct ContentView: View {
 
             Divider().background(Color.white.opacity(0.12))
 
-            Text("Darkgrid never asks for its own permission on every site. Safari owns the website-access permission; after you grant all-site access, the theme runs automatically on allowed pages.")
+            Text("Darkgrid does not ask for its own permission on every website. Safari owns the website-access permission; after all-site access is granted, the theme runs automatically on allowed pages.")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -148,40 +125,5 @@ struct ContentView: View {
             .font(.system(size: 11, weight: .medium, design: .monospaced))
             .foregroundColor(.secondary)
             .padding(.top, 4)
-    }
-
-    private var statusTitle: String {
-        if let error = extensionState.errorMessage, !error.isEmpty {
-            return "STATUS UNAVAILABLE"
-        }
-
-        switch extensionState.isEnabled {
-        case true: return "SAFARI EXTENSION ENABLED"
-        case false: return "SAFARI EXTENSION DISABLED"
-        case nil: return "CHECKING EXTENSION"
-        }
-    }
-
-    private var statusDetail: String {
-        if let error = extensionState.errorMessage, !error.isEmpty {
-            return error
-        }
-
-        switch extensionState.isEnabled {
-        case true:
-            return "Darkgrid is enabled in Safari. Website styling follows the controls in the Safari extension panel."
-        case false:
-            return "Enable Darkgrid in Safari settings, then grant all-site website access once."
-        case nil:
-            return "Checking the embedded Safari Web Extension state…"
-        }
-    }
-
-    private var statusColor: Color {
-        switch extensionState.isEnabled {
-        case true: return neon
-        case false: return .red
-        case nil: return .yellow
-        }
     }
 }
