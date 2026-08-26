@@ -1,7 +1,7 @@
 name: Build Darkgrid
 on:
   push:
-    branches: [main]
+    branches: [main, major-debug-overhaul]
   pull_request:
   workflow_dispatch:
 
