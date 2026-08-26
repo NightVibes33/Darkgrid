@@ -30,12 +30,17 @@ for (const token of [
   'MutationObserver',
   'shadowRoot',
   'data-darkgrid-shadow-style',
+  'prepareShadowRoot',
+  'ensureShadowStyles',
   '::before',
   '::after',
   'data-darkgrid-before-gradient',
   'data-darkgrid-before-shadow',
   'characterData',
   'attributes: true',
+  'isSiteStylesheetElement',
+  'mutationAffectsStylesheet',
+  'stylesheetContext',
   'ancestorOrigins',
   'ensureReadableAccent',
   'isSimpleMonochromeSvg',
@@ -64,6 +69,7 @@ assert.match(css, /data-darkgrid-before-gradient/);
 assert.match(css, /data-darkgrid-before-shadow/);
 assert.match(css, /data-darkgrid-svg-fill/);
 assert.match(css, /darkgrid-color-text:not\(\.darkgrid-color-links\)/);
+assert.match(css, /darkgrid-color-text:not\(\.darkgrid-color-links\) a \[data-darkgrid-text\]/);
 assert.match(css, /darkgrid-color-text[^\n]*:where\(input, textarea\)::placeholder/);
 
 const popup = fs.readFileSync(path.join(resources, 'popup.js'), 'utf8');
