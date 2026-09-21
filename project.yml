@@ -24,7 +24,8 @@ targets:
     preBuildScripts:
       - name: Generate NeonGrid app icon
         script: |
-          xcrun swift "$SRCROOT/Scripts/generate_app_icon.swift" "$SRCROOT/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" "$SRCROOT/Scripts/NeonGridIconSource.0.b64" "$SRCROOT/Scripts/NeonGridIconSource.1.b64" "$SRCROOT/Scripts/NeonGridIconSource.2.b64" "$SRCROOT/Scripts/NeonGridIconSource.3.b64" "$SRCROOT/Scripts/NeonGridIconSource.4.b64"
+          cat "$SRCROOT"/Scripts/NeonGridIconSource.*.b64 | tr -d '\\n\\r\\t ' | /usr/bin/base64 -D > /tmp/neongrid-icon-source.jpg
+          /usr/bin/sips -s format png -z 1024 1024 /tmp/neongrid-icon-source.jpg --out "$SRCROOT/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" >/dev/null
         basedOnDependencyAnalysis: false
     settings:
       base:
