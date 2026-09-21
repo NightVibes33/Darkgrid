@@ -10,6 +10,8 @@
     colorBorders: true,
     colorAllText: false,
     edgeGlow: false,
+    accentIntensity: 0.78,
+    glowStrength: 0.62,
     excludedDomains: []
   };
 
@@ -71,7 +73,7 @@
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links]):not([data-darkgrid-shadow-measuring])) a [data-darkgrid-before-text]::before,
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links]):not([data-darkgrid-shadow-measuring])) a [data-darkgrid-after-text]::after{color:#e7e7e7!important}
 :host([data-darkgrid-shadow-on]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-border]{border-color:#343434!important;outline-color:#343434!important}
-:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-borders]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-border]{border-color:rgba(var(--darkgrid-accent-rgb),.5)!important;outline-color:rgba(var(--darkgrid-accent-rgb),.58)!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-borders]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-border]{border-color:rgba(var(--darkgrid-accent-rgb),calc(.5 * var(--darkgrid-accent-intensity,.78)))!important;outline-color:rgba(var(--darkgrid-accent-rgb),calc(.58 * var(--darkgrid-accent-intensity,.78)))!important}
 :host([data-darkgrid-shadow-on]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-shadow]{box-shadow:var(--darkgrid-box-shadow)!important}
 :host([data-darkgrid-shadow-on]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-before-surface]::before{background-color:var(--darkgrid-before-normal)!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-frost]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-before-surface]::before{background-color:var(--darkgrid-before-frost)!important}
@@ -163,6 +165,11 @@
       g: Number.parseInt(hex.slice(2, 4), 16),
       b: Number.parseInt(hex.slice(4, 6), 16)
     };
+  }
+
+  function clamp01(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
   }
 
   function stripManagedStyle(value) {
@@ -832,10 +839,23 @@
     }, true);
   }
 
+  async function syncSharedSettings() {
+    try {
+      if (typeof browser.runtime?.sendMessage === "function") {
+        await browser.runtime.sendMessage({ type: "darkgrid:sync-shared" });
+      }
+    } catch {
+      // The renderer still works from browser.storage.local if native sync is unavailable.
+    }
+  }
+
   async function loadSettings() {
     try {
       const stored = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
-      return { ...DEFAULT_SETTINGS, ...stored };
+      const merged = { ...DEFAULT_SETTINGS, ...stored };
+      merged.accentIntensity = clamp01(merged.accentIntensity, DEFAULT_SETTINGS.accentIntensity);
+      merged.glowStrength = clamp01(merged.glowStrength, DEFAULT_SETTINGS.glowStrength);
+      return merged;
     } catch {
       return { ...DEFAULT_SETTINGS };
     }
@@ -873,6 +893,8 @@
     root.style.setProperty("--darkgrid-accent", accentHex);
     root.style.setProperty("--darkgrid-accent-readable", readableHex);
     root.style.setProperty("--darkgrid-accent-rgb", `${accent.r}, ${accent.g}, ${accent.b}`);
+    root.style.setProperty("--darkgrid-accent-intensity", String(settings.accentIntensity));
+    root.style.setProperty("--darkgrid-glow-strength", String(settings.glowStrength));
     root.style.setProperty("--darkgrid-page-frost", Engine.buildPageFrostColor(accent));
 
     const classes = {
@@ -916,5 +938,8 @@
     if (message?.type === "darkgrid:refresh") void applySettings();
   });
 
-  void applySettings();
+  void (async () => {
+    await syncSharedSettings();
+    await applySettings();
+  })();
 })();

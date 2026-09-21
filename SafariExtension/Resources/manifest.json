@@ -7,10 +7,13 @@
     "storage",
     "tabs",
     "activeTab",
+    "nativeMessaging",
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["background.js"],
+    "scripts": [
+      "background.js"
+    ],
     "persistent": false
   },
   "browser_action": {
@@ -19,9 +22,16 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "css": ["theme.css"],
-      "js": ["surface-engine.js", "content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "theme.css"
+      ],
+      "js": [
+        "surface-engine.js",
+        "content.js"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true

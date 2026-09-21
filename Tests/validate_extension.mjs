@@ -17,6 +17,7 @@ assert.deepEqual(manifest.content_scripts[0].matches, ['<all_urls>']);
 assert.deepEqual(manifest.content_scripts[0].js, ['surface-engine.js', 'content.js']);
 assert.ok(manifest.permissions.includes('<all_urls>'));
 assert.ok(manifest.permissions.includes('storage'));
+assert.ok(manifest.permissions.includes('nativeMessaging'));
 
 for (const file of [
   'manifest.json', 'background.js', 'surface-engine.js', 'content.js',
@@ -77,6 +78,12 @@ assert.match(css, /data-darkgrid-before-gradient/);
 assert.match(css, /data-darkgrid-svg-fill/);
 assert.match(css, /darkgrid-color-text:not\(\.darkgrid-color-links\)/);
 
+const background = fs.readFileSync(path.join(resources, 'background.js'), 'utf8');
+assert.match(background, /sendNativeMessage/);
+assert.match(background, /darkgrid:sync-shared/);
+assert.match(background, /accentIntensity/);
+assert.match(background, /glowStrength/);
+
 const popup = fs.readFileSync(path.join(resources, 'popup.js'), 'utf8');
 assert.match(popup, /EXCLUDED/);
 assert.match(popup, /cancelAccentSave/);
@@ -84,6 +91,7 @@ assert.match(popup, /accentSaveGeneration/);
 assert.match(popup, /Promise\.allSettled/);
 assert.match(popup, /storage\.onChanged/);
 assert.match(popup, /aria-pressed/);
+assert.match(popup, /sendNativeMessage/);
 assert.doesNotMatch(popup, /sendMessage/);
 assert.doesNotMatch(popup, /startsWith\(["']\*\./);
 assert.match(popup, /setTimeout\([^]*90/);
@@ -112,10 +120,28 @@ const host = fs.readFileSync(path.join(root, 'App', 'ContentView.swift'), 'utf8'
 assert.match(host, /SFSafariExtensionManager\.getStateOfExtension/);
 assert.match(host, /isEnabled/);
 assert.match(host, /REFRESH EXTENSION STATUS/);
+assert.match(host, /NeonGridSharedSettings/);
+assert.match(host, /runtimeEnabled/);
+assert.match(host, /accentColor/);
+
+const nativeHandler = fs.readFileSync(path.join(root, 'SafariExtension', 'SafariWebExtensionHandler.swift'), 'utf8');
+assert.match(nativeHandler, /group\.com\.nightvibes33\.Darkgrid/);
+assert.match(nativeHandler, /getSharedSettings/);
+assert.match(nativeHandler, /setSharedSettings/);
+
+for (const entitlement of [
+  path.join(root, 'App', 'NeonGrid.entitlements'),
+  path.join(root, 'SafariExtension', 'NeonGridExtension.entitlements')
+]) {
+  const text = fs.readFileSync(entitlement, 'utf8');
+  assert.match(text, /group\.com\.nightvibes33\.Darkgrid/);
+}
 
 const project = fs.readFileSync(path.join(root, 'project.yml'), 'utf8');
 assert.match(project, /CURRENT_PROJECT_VERSION:\s*63/);
 assert.match(project, /MARKETING_VERSION:\s*1\.2\.0/);
+assert.match(project, /CODE_SIGN_ENTITLEMENTS:\s*App\/NeonGrid\.entitlements/);
+assert.match(project, /CODE_SIGN_ENTITLEMENTS:\s*SafariExtension\/NeonGridExtension\.entitlements/);
 
 for (const testFile of ['browser_integration.mjs', 'popup_integration.mjs']) {
   assert.ok(fs.existsSync(path.join(root, 'Tests', testFile)), `Missing integration test: ${testFile}`);

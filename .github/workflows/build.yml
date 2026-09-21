@@ -70,7 +70,9 @@ jobs:
       - name: Validate source metadata, resources, and icon
         run: |
           plutil -lint App/Info.plist
+          plutil -lint App/NeonGrid.entitlements
           plutil -lint SafariExtension/Info.plist
+          plutil -lint SafariExtension/NeonGridExtension.entitlements
           python3 -m json.tool SafariExtension/Resources/manifest.json >/dev/null
           python3 - <<'PY'
           import json
@@ -84,10 +86,13 @@ jobs:
           python3 -m json.tool App/Assets.xcassets/AppIcon.appiconset/Contents.json >/dev/null
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" SafariExtension/Info.plist | grep -Fx "com.apple.Safari.web-extension"
           /usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPrincipalClass" SafariExtension/Info.plist | grep -F "SafariWebExtensionHandler"
+          /usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups:0" App/NeonGrid.entitlements | grep -Fx "group.com.nightvibes33.Darkgrid"
+          /usr/libexec/PlistBuddy -c "Print :com.apple.security.application-groups:0" SafariExtension/NeonGridExtension.entitlements | grep -Fx "group.com.nightvibes33.Darkgrid"
           ICON="App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
           test -f "$ICON"
           test "$(sips -g pixelWidth "$ICON" | awk '/pixelWidth/{print $2}')" = "1024"
           test "$(sips -g pixelHeight "$ICON" | awk '/pixelHeight/{print $2}')" = "1024"
+          test "$(sips -g hasAlpha "$ICON" | awk '/hasAlpha/{print $2}')" = "no"
 
       - name: Analyze iOS targets
         run: |

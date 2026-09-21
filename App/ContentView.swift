@@ -58,33 +58,46 @@ private enum SafariExtensionState: Equatable {
 private struct NeonTheme: Identifiable, Equatable {
     let id: String
     let title: String
+    let hex: String
     let color: Color
 
+    init(id: String, title: String, hex: String) {
+        self.id = id
+        self.title = title
+        self.hex = hex.uppercased()
+        self.color = Color(hex: hex)
+    }
+
     static let presets: [NeonTheme] = [
-        .init(id: "cyan", title: "Cyan", color: Color(hex: "#00F5FF")),
-        .init(id: "purple", title: "Purple", color: Color(hex: "#B026FF")),
-        .init(id: "green", title: "Green", color: Color(hex: "#00FF66")),
-        .init(id: "red", title: "Red", color: Color(hex: "#FF1744"))
+        .init(id: "cyan", title: "Cyan", hex: "#00F5FF"),
+        .init(id: "purple", title: "Purple", hex: "#B026FF"),
+        .init(id: "green", title: "Green", hex: "#00FF66"),
+        .init(id: "red", title: "Red", hex: "#FF1744")
     ]
 
-    static func theme(for id: String) -> NeonTheme {
-        presets.first(where: { $0.id == id }) ?? presets[0]
+    static func theme(forHex hex: String) -> NeonTheme {
+        let normalized = hex.uppercased()
+        if let preset = presets.first(where: { $0.hex == normalized }) {
+            return preset
+        }
+        return NeonTheme(id: "custom", title: "Custom", hex: normalized)
     }
 }
 
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
-    @AppStorage("neongrid.theme") private var themeID = "cyan"
-    @AppStorage("neongrid.frostTint") private var frostTint = true
-    @AppStorage("neongrid.colorLinks") private var colorLinks = true
-    @AppStorage("neongrid.colorBorders") private var colorBorders = true
-    @AppStorage("neongrid.colorAllText") private var colorAllText = false
-    @AppStorage("neongrid.edgeGlow") private var edgeGlow = true
-    @AppStorage("neongrid.accentIntensity") private var accentIntensity = 0.78
-    @AppStorage("neongrid.glowStrength") private var glowStrength = 0.62
-    @AppStorage("neongrid.surfaceStyle") private var surfaceStyle = "frosted"
-    @AppStorage("neongrid.excludedDomains") private var excludedDomains = ""
+    @AppStorage("enabled", store: NeonGridSharedSettings.defaults) private var runtimeEnabled = true
+    @AppStorage("accentColor", store: NeonGridSharedSettings.defaults) private var accentColor = "#00F5FF"
+    @AppStorage("frostTint", store: NeonGridSharedSettings.defaults) private var frostTint = true
+    @AppStorage("colorLinks", store: NeonGridSharedSettings.defaults) private var colorLinks = true
+    @AppStorage("colorBorders", store: NeonGridSharedSettings.defaults) private var colorBorders = true
+    @AppStorage("colorAllText", store: NeonGridSharedSettings.defaults) private var colorAllText = false
+    @AppStorage("edgeGlow", store: NeonGridSharedSettings.defaults) private var edgeGlow = false
+    @AppStorage("accentIntensity", store: NeonGridSharedSettings.defaults) private var accentIntensity = 0.78
+    @AppStorage("glowStrength", store: NeonGridSharedSettings.defaults) private var glowStrength = 0.62
+    @AppStorage("surfaceStyle", store: NeonGridSharedSettings.defaults) private var surfaceStyle = "frosted"
+    @AppStorage("excludedDomainsCSV", store: NeonGridSharedSettings.defaults) private var excludedDomains = ""
 
     @State private var selectedTab: NeonTab = .home
     @State private var extensionState: SafariExtensionState = .checking
@@ -92,7 +105,7 @@ struct ContentView: View {
 
     private let extensionBundleIdentifier = "com.nightvibes33.Darkgrid.Extension"
 
-    private var theme: NeonTheme { NeonTheme.theme(for: themeID) }
+    private var theme: NeonTheme { NeonTheme.theme(forHex: accentColor) }
 
     var body: some View {
         ZStack {
@@ -103,7 +116,8 @@ struct ContentView: View {
                     switch selectedTab {
                     case .home:
                         HomeScreen(
-                            themeID: $themeID,
+                            accentColor: $accentColor,
+                            runtimeEnabled: $runtimeEnabled,
                             frostTint: $frostTint,
                             colorLinks: $colorLinks,
                             colorBorders: $colorBorders,
@@ -115,7 +129,7 @@ struct ContentView: View {
                         )
                     case .appearance:
                         AppearanceScreen(
-                            themeID: $themeID,
+                            accentColor: $accentColor,
                             accentIntensity: $accentIntensity,
                             glowStrength: $glowStrength,
                             frostTint: $frostTint,
@@ -151,7 +165,10 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear(perform: refreshExtensionStatus)
+        .onAppear {
+            NeonGridSharedSettings.registerDefaults()
+            refreshExtensionStatus()
+        }
         .onChange(of: scenePhase) { phase in
             if phase == .active { refreshExtensionStatus() }
         }
@@ -181,7 +198,7 @@ struct ContentView: View {
     }
 
     private func resetDashboardPreferences() {
-        themeID = "cyan"
+        accentColor = "#00F5FF"
         frostTint = true
         colorLinks = true
         colorBorders = true
@@ -191,11 +208,14 @@ struct ContentView: View {
         glowStrength = 0.62
         surfaceStyle = "frosted"
         excludedDomains = ""
+        runtimeEnabled = true
+        NeonGridSharedSettings.defaults.set([String](), forKey: "excludedDomains")
     }
 }
 
 private struct HomeScreen: View {
-    @Binding var themeID: String
+    @Binding var accentColor: String
+    @Binding var runtimeEnabled: Bool
     @Binding var frostTint: Bool
     @Binding var colorLinks: Bool
     @Binding var colorBorders: Bool
@@ -206,14 +226,19 @@ private struct HomeScreen: View {
     let refresh: () -> Void
     let openTab: (NeonTab) -> Void
 
-    private var theme: NeonTheme { NeonTheme.theme(for: themeID) }
+    private var theme: NeonTheme { NeonTheme.theme(forHex: accentColor) }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
                 BrandHeader(accent: theme.color)
 
-                ExtensionHeroCard(state: extensionState, accent: theme.color, refresh: refresh)
+                ExtensionHeroCard(
+                    state: extensionState,
+                    runtimeEnabled: $runtimeEnabled,
+                    accent: theme.color,
+                    refresh: refresh
+                )
 
                 ThemeHeroCard(theme: theme) {
                     openTab(.appearance)
@@ -223,8 +248,8 @@ private struct HomeScreen: View {
 
                 HStack(spacing: 10) {
                     ForEach(NeonTheme.presets) { preset in
-                        ThemeChip(theme: preset, selected: preset.id == themeID) {
-                            themeID = preset.id
+                        ThemeChip(theme: preset, selected: preset.hex == accentColor.uppercased()) {
+                            accentColor = preset.hex
                         }
                     }
                 }
@@ -339,7 +364,7 @@ private struct HomeScreen: View {
 }
 
 private struct AppearanceScreen: View {
-    @Binding var themeID: String
+    @Binding var accentColor: String
     @Binding var accentIntensity: Double
     @Binding var glowStrength: Double
     @Binding var frostTint: Bool
@@ -349,7 +374,7 @@ private struct AppearanceScreen: View {
     @Binding var edgeGlow: Bool
     @Binding var surfaceStyle: String
 
-    private var theme: NeonTheme { NeonTheme.theme(for: themeID) }
+    private var theme: NeonTheme { NeonTheme.theme(forHex: accentColor) }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -361,8 +386,8 @@ private struct AppearanceScreen: View {
 
                 HStack(spacing: 12) {
                     ForEach(NeonTheme.presets) { preset in
-                        ThemeOrb(theme: preset, selected: preset.id == themeID) {
-                            themeID = preset.id
+                        ThemeOrb(theme: preset, selected: preset.hex == accentColor.uppercased()) {
+                            accentColor = preset.hex
                         }
                     }
                 }
@@ -391,7 +416,10 @@ private struct AppearanceScreen: View {
                         symbol: "square.fill",
                         selected: surfaceStyle == "dark",
                         accent: theme.color
-                    ) { surfaceStyle = "dark" }
+                    ) {
+                        surfaceStyle = "dark"
+                        frostTint = false
+                    }
 
                     SurfaceStyleCard(
                         title: "Frosted",
@@ -399,7 +427,10 @@ private struct AppearanceScreen: View {
                         symbol: "square.on.square",
                         selected: surfaceStyle == "frosted",
                         accent: theme.color
-                    ) { surfaceStyle = "frosted" }
+                    ) {
+                        surfaceStyle = "frosted"
+                        frostTint = true
+                    }
                 }
 
                 Text("DETAIL CONTROLS")
@@ -553,11 +584,14 @@ private struct SitesScreen: View {
         var next = domains
         if !next.contains(host) { next.append(host) }
         excludedDomains = next.joined(separator: ",")
+        NeonGridSharedSettings.defaults.set(next, forKey: "excludedDomains")
         newDomain = ""
     }
 
     private func removeDomain(_ domain: String) {
-        excludedDomains = domains.filter { $0 != domain }.joined(separator: ",")
+        let next = domains.filter { $0 != domain }
+        excludedDomains = next.joined(separator: ",")
+        NeonGridSharedSettings.defaults.set(next, forKey: "excludedDomains")
     }
 }
 
@@ -735,12 +769,13 @@ private struct BrandHeader: View {
 
 private struct ExtensionHeroCard: View {
     let state: SafariExtensionState
+    @Binding var runtimeEnabled: Bool
     let accent: Color
     let refresh: () -> Void
 
     var body: some View {
-        Button(action: refresh) {
-            HStack(spacing: 14) {
+        HStack(spacing: 14) {
+            Button(action: refresh) {
                 ZStack {
                     Circle()
                         .fill(accent.opacity(0.12))
@@ -749,46 +784,47 @@ private struct ExtensionHeroCard: View {
                         .stroke(accent.opacity(0.7), lineWidth: 1)
                         .frame(width: 52, height: 52)
                         .shadow(color: accent.opacity(0.8), radius: 10)
-                    Image(systemName: state == .enabled ? "power" : "bolt.fill")
+                    Image(systemName: "power")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(accent)
                 }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(state == .enabled ? "NeonGrid is Active" : "Enable NeonGrid")
-                        .font(.system(size: 17, weight: .bold))
-                    Text(state.detail)
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.55))
-                        .lineLimit(2)
-                }
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(state == .enabled ? Color(hex: "#00FF9D") : Color(hex: "#FFB84D"))
-                        .frame(width: 8, height: 8)
-                    Text(state.shortLabel.uppercased())
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.75))
-                }
             }
-            .padding(15)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color(hex: "#061317").opacity(0.95), Color(hex: "#10101B").opacity(0.95)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-            )
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(accent.opacity(0.45), lineWidth: 1))
-            .shadow(color: accent.opacity(0.12), radius: 18)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Refresh Safari extension status")
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(runtimeEnabled ? "NeonGrid is Active" : "Enable NeonGrid")
+                    .font(.system(size: 17, weight: .bold))
+                Text(
+                    state == .enabled
+                        ? "Style websites in Safari with true-black dark mode."
+                        : state.detail
+                )
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.55))
+                .lineLimit(2)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $runtimeEnabled)
+                .labelsHidden()
+                .toggleStyle(SwitchToggleStyle(tint: accent))
+                .accessibilityLabel("Enable NeonGrid styling")
         }
-        .buttonStyle(.plain)
+        .padding(15)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(hex: "#061317").opacity(0.95), Color(hex: "#10101B").opacity(0.95)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+        )
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(accent.opacity(0.45), lineWidth: 1))
+        .shadow(color: accent.opacity(0.12), radius: 18)
     }
 }
 
