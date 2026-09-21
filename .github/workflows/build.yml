@@ -63,7 +63,7 @@ jobs:
         run: xcodegen generate
 
       - name: Generate NeonGrid app icon
-        run: xcrun swift Scripts/generate_app_icon.swift App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png Scripts/NeonGridIconSource.b64
+        run: xcrun swift Scripts/generate_app_icon.swift App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png Scripts/NeonGridIconSource.0.b64 Scripts/NeonGridIconSource.1.b64 Scripts/NeonGridIconSource.2.b64 Scripts/NeonGridIconSource.3.b64 Scripts/NeonGridIconSource.4.b64
 
       - name: Validate source metadata, resources, and icon
         run: |

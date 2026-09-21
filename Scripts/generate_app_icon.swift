@@ -4,15 +4,16 @@ import Foundation
 
 let arguments = CommandLine.arguments
 guard arguments.count >= 3 else {
-    fputs("usage: generate_app_icon.swift <output.png> <source.b64>\n", stderr)
+    fputs("usage: generate_app_icon.swift <output.png> <source-part-0.b64> [source-part-1.b64 ...]\n", stderr)
     exit(2)
 }
 
 let outputURL = URL(fileURLWithPath: arguments[1])
-let sourceURL = URL(fileURLWithPath: arguments[2])
-
-let encoded = try String(contentsOf: sourceURL, encoding: .utf8)
-    .trimmingCharacters(in: .whitespacesAndNewlines)
+let sourceURLs = arguments.dropFirst(2).map(URL.init(fileURLWithPath:))
+let encoded = try sourceURLs
+    .map { try String(contentsOf: $0, encoding: .utf8) }
+    .joined()
+    .filter { !$0.isWhitespace }
 
 guard let sourceData = Data(base64Encoded: encoded),
       let sourceImage = NSImage(data: sourceData) else {
