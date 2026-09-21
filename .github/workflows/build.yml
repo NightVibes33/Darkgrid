@@ -64,7 +64,7 @@ jobs:
 
       - name: Generate NeonGrid app icon
         run: |
-          cat Scripts/NeonGridIconSource.*.b64 | tr -d '\\n\\r\\t ' | /usr/bin/base64 -D > /tmp/neongrid-icon-source.jpg
+          cat Scripts/NeonGridIconSource.*.b64 | /usr/bin/base64 -D > /tmp/neongrid-icon-source.jpg
           /usr/bin/sips -s format png -z 1024 1024 /tmp/neongrid-icon-source.jpg --out App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png >/dev/null
 
       - name: Validate source metadata, resources, and icon
