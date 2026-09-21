@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const resources = path.join(root, 'SafariExtension', 'Resources');
-const manifest = JSON.parse(fs.readFileSync(path.join(resources, 'manifest.json'), 'utf8');
+const manifest = JSON.parse(fs.readFileSync(path.join(resources, 'manifest.json'), 'utf8'));
 
 function gitBlobSha(text) {
   const size = Buffer.byteLength(text, 'utf8');
