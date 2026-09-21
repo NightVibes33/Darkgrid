@@ -2,8 +2,8 @@ html.darkgrid-on {
   --darkgrid-accent: #00f5ff;
   --darkgrid-accent-readable: #00f5ff;
   --darkgrid-accent-rgb: 0, 245, 255;
-  --darkgrid-accent-intensity: .78;
-  --darkgrid-glow-strength: .62;
+  --darkgrid-accent-intensity: 1;
+  --darkgrid-glow-strength: 1;
   --darkgrid-page-frost: rgb(0, 7, 8);
 }
 

@@ -6,12 +6,13 @@ const DEFAULT_SETTINGS = {
   colorBorders: true,
   colorAllText: false,
   edgeGlow: false,
-  accentIntensity: 0.78,
-  glowStrength: 0.62,
+  accentIntensity: 1.0,
+  glowStrength: 1.0,
   excludedDomains: []
 };
 
 const NATIVE_APP_ID = "com.nightvibes33.Darkgrid";
+const RENDERER_BASELINE_VERSION = 2;
 
 function normalizeHost(value) {
   return String(value || "").trim().toLowerCase().replace(/^\.+|\.+$/g, "");
@@ -40,7 +41,20 @@ function normalizeSettings(next) {
 }
 
 async function ensureDefaults() {
-  const existing = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
+  const keys = [...Object.keys(DEFAULT_SETTINGS), "rendererBaselineVersion"];
+  const existing = await browser.storage.local.get(keys);
+
+  if (Number(existing.rendererBaselineVersion || 0) < RENDERER_BASELINE_VERSION) {
+    await browser.storage.local.set({
+      accentIntensity: 1.0,
+      glowStrength: 1.0,
+      rendererBaselineVersion: RENDERER_BASELINE_VERSION
+    });
+    existing.accentIntensity = 1.0;
+    existing.glowStrength = 1.0;
+    existing.rendererBaselineVersion = RENDERER_BASELINE_VERSION;
+  }
+
   const missing = {};
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     if (typeof existing[key] === "undefined") missing[key] = value;

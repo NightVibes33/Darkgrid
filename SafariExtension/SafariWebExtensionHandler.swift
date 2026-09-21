@@ -16,8 +16,8 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         "colorBorders": true,
         "colorAllText": false,
         "edgeGlow": false,
-        "accentIntensity": 0.78,
-        "glowStrength": 0.62,
+        "accentIntensity": 1.0,
+        "glowStrength": 1.0,
         "excludedDomains": [String]()
     ]
 
@@ -68,6 +68,7 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
     private func readSettings() -> [String: Any] {
         let defaults = sharedDefaults
+        migrateLegacyRendererDefaults(defaults)
         var settings = defaultSettings
 
         for key in [
@@ -108,6 +109,7 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
     private func writeSettings(_ patch: [String: Any]) {
         let defaults = sharedDefaults
+        migrateLegacyRendererDefaults(defaults)
 
         for key in [
             "enabled",
@@ -146,6 +148,14 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             let normalized = normalizeDomains(domains.compactMap { $0 as? String })
             defaults.set(normalized, forKey: "excludedDomains")
             defaults.set(normalized.joined(separator: ","), forKey: "excludedDomainsCSV")
+        }
+    }
+
+    private func migrateLegacyRendererDefaults(_ defaults: UserDefaults) {
+        if defaults.integer(forKey: "rendererBaselineVersion") < 2 {
+            defaults.set(1.0, forKey: "accentIntensity")
+            defaults.set(1.0, forKey: "glowStrength")
+            defaults.set(2, forKey: "rendererBaselineVersion")
         }
     }
 

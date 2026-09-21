@@ -7,8 +7,8 @@ const DEFAULT_SETTINGS = {
   colorBorders: true,
   colorAllText: false,
   edgeGlow: false,
-  accentIntensity: 0.78,
-  glowStrength: 0.62,
+  accentIntensity: 1.0,
+  glowStrength: 1.0,
   excludedDomains: []
 };
 

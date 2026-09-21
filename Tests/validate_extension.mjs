@@ -77,12 +77,20 @@ assert.match(css, /data-darkgrid-before-surface/);
 assert.match(css, /data-darkgrid-before-gradient/);
 assert.match(css, /data-darkgrid-svg-fill/);
 assert.match(css, /darkgrid-color-text:not\(\.darkgrid-color-links\)/);
+assert.match(css, /--darkgrid-accent-intensity:\s*1;/, 'default accent intensity must preserve the legacy full-strength renderer');
+assert.match(css, /--darkgrid-glow-strength:\s*1;/, 'default glow strength must preserve the legacy full-strength renderer');
+for (const legacyAlpha of ['.68', '.50', '.58', '.28', '.14']) {
+  assert.ok(css.includes(legacyAlpha), `Missing legacy visual-strength constant ${legacyAlpha}`);
+}
 
 const background = fs.readFileSync(path.join(resources, 'background.js'), 'utf8');
 assert.match(background, /sendNativeMessage/);
 assert.match(background, /darkgrid:sync-shared/);
 assert.match(background, /accentIntensity/);
 assert.match(background, /glowStrength/);
+assert.match(background, /RENDERER_BASELINE_VERSION\s*=\s*2/);
+assert.match(background, /accentIntensity:\s*1\.0/);
+assert.match(background, /glowStrength:\s*1\.0/);
 
 const popup = fs.readFileSync(path.join(resources, 'popup.js'), 'utf8');
 assert.match(popup, /EXCLUDED/);
@@ -123,11 +131,15 @@ assert.match(host, /REFRESH EXTENSION STATUS/);
 assert.match(host, /NeonGridSharedSettings/);
 assert.match(host, /runtimeEnabled/);
 assert.match(host, /accentColor/);
+assert.match(host, /accentIntensity\s*=\s*1\.0/);
+assert.match(host, /glowStrength\s*=\s*1\.0/);
 
 const nativeHandler = fs.readFileSync(path.join(root, 'SafariExtension', 'SafariWebExtensionHandler.swift'), 'utf8');
 assert.match(nativeHandler, /group\.com\.nightvibes33\.Darkgrid/);
 assert.match(nativeHandler, /getSharedSettings/);
 assert.match(nativeHandler, /setSharedSettings/);
+assert.match(nativeHandler, /rendererBaselineVersion/);
+assert.match(nativeHandler, /accentIntensity"\]\s*=\s*clamp/);
 
 for (const entitlement of [
   path.join(root, 'App', 'NeonGrid.entitlements'),

@@ -94,8 +94,8 @@ struct ContentView: View {
     @AppStorage("colorBorders", store: NeonGridSharedSettings.defaults) private var colorBorders = true
     @AppStorage("colorAllText", store: NeonGridSharedSettings.defaults) private var colorAllText = false
     @AppStorage("edgeGlow", store: NeonGridSharedSettings.defaults) private var edgeGlow = false
-    @AppStorage("accentIntensity", store: NeonGridSharedSettings.defaults) private var accentIntensity = 0.78
-    @AppStorage("glowStrength", store: NeonGridSharedSettings.defaults) private var glowStrength = 0.62
+    @AppStorage("accentIntensity", store: NeonGridSharedSettings.defaults) private var accentIntensity = 1.0
+    @AppStorage("glowStrength", store: NeonGridSharedSettings.defaults) private var glowStrength = 1.0
     @AppStorage("surfaceStyle", store: NeonGridSharedSettings.defaults) private var surfaceStyle = "frosted"
     @AppStorage("excludedDomainsCSV", store: NeonGridSharedSettings.defaults) private var excludedDomains = ""
 
@@ -204,8 +204,8 @@ struct ContentView: View {
         colorBorders = true
         colorAllText = false
         edgeGlow = true
-        accentIntensity = 0.78
-        glowStrength = 0.62
+        accentIntensity = 1.0
+        glowStrength = 1.0
         surfaceStyle = "frosted"
         excludedDomains = ""
         runtimeEnabled = true

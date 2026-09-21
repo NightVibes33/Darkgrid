@@ -10,8 +10,8 @@
     colorBorders: true,
     colorAllText: false,
     edgeGlow: false,
-    accentIntensity: 0.78,
-    glowStrength: 0.62,
+    accentIntensity: 1.0,
+    glowStrength: 1.0,
     excludedDomains: []
   };
 
@@ -73,7 +73,7 @@
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links]):not([data-darkgrid-shadow-measuring])) a [data-darkgrid-before-text]::before,
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-text]:not([data-darkgrid-shadow-color-links]):not([data-darkgrid-shadow-measuring])) a [data-darkgrid-after-text]::after{color:#e7e7e7!important}
 :host([data-darkgrid-shadow-on]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-border]{border-color:#343434!important;outline-color:#343434!important}
-:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-borders]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-border]{border-color:rgba(var(--darkgrid-accent-rgb),calc(.5 * var(--darkgrid-accent-intensity,.78)))!important;outline-color:rgba(var(--darkgrid-accent-rgb),calc(.58 * var(--darkgrid-accent-intensity,.78)))!important}
+:host([data-darkgrid-shadow-on][data-darkgrid-shadow-color-borders]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-border]{border-color:rgba(var(--darkgrid-accent-rgb),calc(.5 * var(--darkgrid-accent-intensity,1)))!important;outline-color:rgba(var(--darkgrid-accent-rgb),calc(.58 * var(--darkgrid-accent-intensity,1)))!important}
 :host([data-darkgrid-shadow-on]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-shadow]{box-shadow:var(--darkgrid-box-shadow)!important}
 :host([data-darkgrid-shadow-on]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-before-surface]::before{background-color:var(--darkgrid-before-normal)!important}
 :host([data-darkgrid-shadow-on][data-darkgrid-shadow-frost]:not([data-darkgrid-shadow-measuring])) [data-darkgrid-before-surface]::before{background-color:var(--darkgrid-before-frost)!important}

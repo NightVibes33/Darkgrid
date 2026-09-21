@@ -14,10 +14,16 @@ enum NeonGridSharedSettings {
             "colorBorders": true,
             "colorAllText": false,
             "edgeGlow": false,
-            "accentIntensity": 0.78,
-            "glowStrength": 0.62,
+            "accentIntensity": 1.0,
+            "glowStrength": 1.0,
             "surfaceStyle": "frosted",
             "excludedDomainsCSV": ""
         ])
+
+        if defaults.integer(forKey: "rendererBaselineVersion") < 2 {
+            defaults.set(1.0, forKey: "accentIntensity")
+            defaults.set(1.0, forKey: "glowStrength")
+            defaults.set(2, forKey: "rendererBaselineVersion")
+        }
     }
 }
