@@ -1,3 +1,4 @@
+import Foundation
 import SafariServices
 import SwiftUI
 
@@ -1318,17 +1319,20 @@ private struct GradientBrandText: View {
     let size: CGFloat
 
     var body: some View {
-        LinearGradient(
-            colors: [Color(hex: "#00F5FF"), Color(hex: "#74B7FF"), Color(hex: "#B026FF"), Color(hex: "#FF43C8")],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-        .mask(
-            Text(text)
-                .font(.system(size: size, weight: .black, design: .rounded))
-        )
-        .frame(height: size + 4)
-        .fixedSize(horizontal: true, vertical: false)
+        Text(text)
+            .font(.system(size: size, weight: .black, design: .rounded))
+            .foregroundColor(.clear)
+            .overlay(
+                LinearGradient(
+                    colors: [Color(hex: "#00F5FF"), Color(hex: "#74B7FF"), Color(hex: "#B026FF"), Color(hex: "#FF43C8")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .mask(
+                    Text(text)
+                        .font(.system(size: size, weight: .black, design: .rounded))
+                )
+            )
     }
 }
 
