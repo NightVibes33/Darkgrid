@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +27,17 @@ for (const file of [
   assert.ok(fs.existsSync(path.join(resources, file)), `Missing extension resource: ${file}`);
 }
 
+function gitBlobSha(text) {
+  const size = Buffer.byteLength(text, 'utf8');
+  return createHash('sha1').update(`blob ${size}\0`).update(text).digest('hex');
+}
+
 const content = fs.readFileSync(path.join(resources, 'content.js'), 'utf8');
+assert.equal(
+  gitBlobSha(content),
+  'dd9eae130539556e881bc9d70d86447c3735c0b6',
+  'content.js must remain byte-for-byte identical to the pre-NeonGrid renderer baseline'
+);
 for (const token of [
   'MutationObserver', 'shadowRoot', 'data-darkgrid-shadow-style', 'prepareShadowRoot',
   'ensureShadowStyles', 'darkgrid-measuring', 'data-darkgrid-shadow-measuring',
@@ -49,11 +60,21 @@ assert.doesNotMatch(
 );
 
 const engine = fs.readFileSync(path.join(resources, 'surface-engine.js'), 'utf8');
+assert.equal(
+  gitBlobSha(engine),
+  '4df75cbeedd8666d51a3cdd1b3e9cb627b312cfe',
+  'surface-engine.js must remain byte-for-byte identical to the pre-NeonGrid renderer baseline'
+);
 for (const token of ['oklch', 'oklab', 'labToRgb', 'contrastRatio', 'ensureContrast', 'rewriteGradientColors', 'repeating-']) {
   assert.ok(engine.includes(token), `Missing surface-engine behavior: ${token}`);
 }
 
 const css = fs.readFileSync(path.join(resources, 'theme.css'), 'utf8');
+assert.equal(
+  gitBlobSha(css),
+  '60cb48968f78f5d41cf5287a39f2ef97d1280503',
+  'theme.css must remain byte-for-byte identical to the pre-NeonGrid renderer baseline'
+);
 assert.match(css, /darkgrid-measuring/);
 assert.match(css, /--darkgrid-accent-readable/);
 assert.match(css, /--darkgrid-gradient-normal/);
@@ -77,8 +98,7 @@ assert.match(css, /data-darkgrid-before-surface/);
 assert.match(css, /data-darkgrid-before-gradient/);
 assert.match(css, /data-darkgrid-svg-fill/);
 assert.match(css, /darkgrid-color-text:not\(\.darkgrid-color-links\)/);
-assert.match(css, /--darkgrid-accent-intensity:\s*1;/, 'default accent intensity must preserve the legacy full-strength renderer');
-assert.match(css, /--darkgrid-glow-strength:\s*1;/, 'default glow strength must preserve the legacy full-strength renderer');
+assert.doesNotMatch(css, /darkgrid-accent-intensity|darkgrid-glow-strength/);
 for (const legacyAlpha of ['.68', '.50', '.58', '.28', '.14']) {
   assert.ok(css.includes(legacyAlpha), `Missing legacy visual-strength constant ${legacyAlpha}`);
 }
@@ -86,11 +106,7 @@ for (const legacyAlpha of ['.68', '.50', '.58', '.28', '.14']) {
 const background = fs.readFileSync(path.join(resources, 'background.js'), 'utf8');
 assert.match(background, /sendNativeMessage/);
 assert.match(background, /darkgrid:sync-shared/);
-assert.match(background, /accentIntensity/);
-assert.match(background, /glowStrength/);
 assert.match(background, /RENDERER_BASELINE_VERSION\s*=\s*2/);
-assert.match(background, /accentIntensity:\s*1\.0/);
-assert.match(background, /glowStrength:\s*1\.0/);
 
 const popup = fs.readFileSync(path.join(resources, 'popup.js'), 'utf8');
 assert.match(popup, /EXCLUDED/);

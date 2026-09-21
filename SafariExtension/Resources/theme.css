@@ -2,8 +2,6 @@ html.darkgrid-on {
   --darkgrid-accent: #00f5ff;
   --darkgrid-accent-readable: #00f5ff;
   --darkgrid-accent-rgb: 0, 245, 255;
-  --darkgrid-accent-intensity: 1;
-  --darkgrid-glow-strength: 1;
   --darkgrid-page-frost: rgb(0, 7, 8);
 }
 
@@ -61,8 +59,8 @@ html.darkgrid-on:not(.darkgrid-measuring) :where(a, a:visited) {
 }
 html.darkgrid-on:not(.darkgrid-measuring).darkgrid-color-links :where(a, a:visited) {
   color: var(--darkgrid-accent-readable) !important;
-  text-decoration-color: rgba(var(--darkgrid-accent-rgb), calc(.68 * var(--darkgrid-accent-intensity))) !important;
-  text-shadow: 0 0 9px rgba(var(--darkgrid-accent-rgb), calc(.10 * var(--darkgrid-accent-intensity))) !important;
+  text-decoration-color: rgba(var(--darkgrid-accent-rgb), .68) !important;
+  text-shadow: 0 0 9px rgba(var(--darkgrid-accent-rgb), .10) !important;
 }
 html.darkgrid-on:not(.darkgrid-measuring).darkgrid-color-text:not(.darkgrid-color-links) :where(a, a:visited) {
   color: #e7e7e7 !important;
@@ -93,8 +91,8 @@ html.darkgrid-on:not(.darkgrid-measuring) [data-darkgrid-border] {
 }
 html.darkgrid-on:not(.darkgrid-measuring).darkgrid-color-borders[data-darkgrid-border],
 html.darkgrid-on:not(.darkgrid-measuring).darkgrid-color-borders [data-darkgrid-border] {
-  border-color: rgba(var(--darkgrid-accent-rgb), calc(.50 * var(--darkgrid-accent-intensity))) !important;
-  outline-color: rgba(var(--darkgrid-accent-rgb), calc(.58 * var(--darkgrid-accent-intensity))) !important;
+  border-color: rgba(var(--darkgrid-accent-rgb), .50) !important;
+  outline-color: rgba(var(--darkgrid-accent-rgb), .58) !important;
 }
 
 html.darkgrid-on:not(.darkgrid-measuring)[data-darkgrid-shadow],
@@ -175,7 +173,7 @@ html.darkgrid-on:not(.darkgrid-measuring) :where(:focus-visible) {
 }
 html.darkgrid-on:not(.darkgrid-measuring).darkgrid-color-borders :where(:focus-visible) {
   outline-color: var(--darkgrid-accent-readable) !important;
-  box-shadow: 0 0 0 2px rgba(var(--darkgrid-accent-rgb), calc(.18 * var(--darkgrid-accent-intensity))), 0 0 14px rgba(var(--darkgrid-accent-rgb), calc(.35 * var(--darkgrid-accent-intensity))) !important;
+  box-shadow: 0 0 0 2px rgba(var(--darkgrid-accent-rgb), .18), 0 0 14px rgba(var(--darkgrid-accent-rgb), .35) !important;
 }
 
 html.darkgrid-on:not(.darkgrid-measuring) :where(hr) {
@@ -183,8 +181,8 @@ html.darkgrid-on:not(.darkgrid-measuring) :where(hr) {
   background-color: #2b2b2b !important;
 }
 html.darkgrid-on:not(.darkgrid-measuring).darkgrid-color-borders :where(hr) {
-  border-color: rgba(var(--darkgrid-accent-rgb), calc(.50 * var(--darkgrid-accent-intensity))) !important;
-  background-color: rgba(var(--darkgrid-accent-rgb), calc(.34 * var(--darkgrid-accent-intensity))) !important;
+  border-color: rgba(var(--darkgrid-accent-rgb), .50) !important;
+  background-color: rgba(var(--darkgrid-accent-rgb), .34) !important;
 }
 
 html.darkgrid-on:not(.darkgrid-measuring) [data-darkgrid-svg-fill] {
@@ -225,8 +223,8 @@ html.darkgrid-on:not(.darkgrid-measuring).darkgrid-glow #darkgrid-edge-glow {
   z-index: 2147483647 !important;
   background: transparent !important;
   box-shadow:
-    inset 0 0 28px rgba(var(--darkgrid-accent-rgb), calc(.28 * var(--darkgrid-glow-strength))),
-    inset 0 0 72px rgba(var(--darkgrid-accent-rgb), calc(.14 * var(--darkgrid-glow-strength))) !important;
+    inset 0 0 28px rgba(var(--darkgrid-accent-rgb), .28),
+    inset 0 0 72px rgba(var(--darkgrid-accent-rgb), .14) !important;
 }
 
 html.darkgrid-on:not(.darkgrid-measuring) ::-webkit-scrollbar {
