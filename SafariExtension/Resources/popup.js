@@ -7,8 +7,6 @@ const DEFAULT_SETTINGS = {
   colorBorders: true,
   colorAllText: false,
   edgeGlow: false,
-  accentIntensity: 1.0,
-  glowStrength: 1.0,
   excludedDomains: []
 };
 
@@ -25,7 +23,6 @@ let colorSaveTimer = 0;
 let accentSaveGeneration = 0;
 let writeGeneration = 0;
 let lastError = "";
-const NATIVE_APP_ID = "com.nightvibes33.Darkgrid";
 
 const $ = selector => document.querySelector(selector);
 const enabled = $("#enabled");
@@ -73,45 +70,13 @@ function readableHex(value) {
   return Engine.rgbToHex(Engine.ensureReadableAccent(accent, { r: 46, g: 46, b: 46 }, 4.5));
 }
 
-function clamp01(value, fallback) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
-}
-
 function normalizeSettings(next) {
   const normalized = { ...DEFAULT_SETTINGS, ...next };
   normalized.accentColor = safeHex(normalized.accentColor);
-  normalized.accentIntensity = clamp01(normalized.accentIntensity, DEFAULT_SETTINGS.accentIntensity);
-  normalized.glowStrength = clamp01(normalized.glowStrength, DEFAULT_SETTINGS.glowStrength);
   normalized.excludedDomains = Array.isArray(normalized.excludedDomains)
     ? Array.from(new Set(normalized.excludedDomains.map(normalizeHost).filter(Boolean)))
     : [];
   return normalized;
-}
-
-async function readSharedSettings() {
-  if (typeof browser.runtime?.sendNativeMessage !== "function") return null;
-  try {
-    const response = await browser.runtime.sendNativeMessage(
-      NATIVE_APP_ID,
-      { action: "getSharedSettings" }
-    );
-    return response?.ok && response.settings ? normalizeSettings(response.settings) : null;
-  } catch {
-    return null;
-  }
-}
-
-async function writeSharedSettings(patch) {
-  if (typeof browser.runtime?.sendNativeMessage !== "function") return;
-  try {
-    await browser.runtime.sendNativeMessage(
-      NATIVE_APP_ID,
-      { action: "setSharedSettings", settings: patch }
-    );
-  } catch {
-    // browser.storage.local remains authoritative when native messaging is unavailable.
-  }
 }
 
 function domainIsExcluded(domain) {
@@ -158,8 +123,6 @@ async function queryActiveTab() {
 
 async function loadSettings() {
   try {
-    const shared = await readSharedSettings();
-    if (shared) await browser.storage.local.set(shared);
     const stored = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
     settings = normalizeSettings(stored);
   } catch (error) {
@@ -188,7 +151,6 @@ async function persistPatch(patch, { cancelPendingAccent = true } = {}) {
 
   try {
     await browser.storage.local.set(patch);
-    await writeSharedSettings(patch);
     if (generation === writeGeneration) clearError();
     return true;
   } catch (error) {

@@ -102,6 +102,7 @@ struct ContentView: View {
     @State private var selectedTab: NeonTab = .home
     @State private var extensionState: SafariExtensionState = .checking
     @State private var previewStyled = true
+    @State private var settingsBridgeReady = false
 
     private let extensionBundleIdentifier = "com.nightvibes33.Darkgrid.Extension"
 
@@ -168,10 +169,33 @@ struct ContentView: View {
         .onAppear {
             NeonGridSharedSettings.registerDefaults()
             refreshExtensionStatus()
+            DispatchQueue.main.async {
+                settingsBridgeReady = true
+            }
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active { refreshExtensionStatus() }
         }
+        .onChange(of: runtimeEnabled) { _ in queueSharedSettingChange("enabled") }
+        .onChange(of: accentColor) { _ in queueSharedSettingChange("accentColor") }
+        .onChange(of: frostTint) { _ in queueSharedSettingChange("frostTint") }
+        .onChange(of: colorLinks) { _ in queueSharedSettingChange("colorLinks") }
+        .onChange(of: colorBorders) { _ in queueSharedSettingChange("colorBorders") }
+        .onChange(of: colorAllText) { _ in queueSharedSettingChange("colorAllText") }
+        .onChange(of: edgeGlow) { _ in queueSharedSettingChange("edgeGlow") }
+        .onChange(of: excludedDomains) { _ in queueSharedSettingChange("excludedDomains") }
+    }
+
+    private func queueSharedSettingChange(_ key: String) {
+        guard settingsBridgeReady else { return }
+        let defaults = NeonGridSharedSettings.defaults
+        var pending = defaults.stringArray(forKey: "pendingSettingKeys") ?? []
+        if !pending.contains(key) {
+            pending.append(key)
+            defaults.set(pending, forKey: "pendingSettingKeys")
+        }
+        let nextRevision = defaults.integer(forKey: "settingsRevision") + 1
+        defaults.set(nextRevision, forKey: "settingsRevision")
     }
 
     private func refreshExtensionStatus() {
@@ -203,7 +227,7 @@ struct ContentView: View {
         colorLinks = true
         colorBorders = true
         colorAllText = false
-        edgeGlow = true
+        edgeGlow = false
         accentIntensity = 1.0
         glowStrength = 1.0
         surfaceStyle = "frosted"

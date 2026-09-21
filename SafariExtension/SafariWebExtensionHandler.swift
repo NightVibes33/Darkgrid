@@ -8,17 +8,15 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         UserDefaults(suiteName: suiteName) ?? .standard
     }
 
-    private let defaultSettings: [String: Any] = [
-        "enabled": true,
-        "accentColor": "#00F5FF",
-        "frostTint": true,
-        "colorLinks": true,
-        "colorBorders": true,
-        "colorAllText": false,
-        "edgeGlow": false,
-        "accentIntensity": 1.0,
-        "glowStrength": 1.0,
-        "excludedDomains": [String]()
+    private let supportedKeys: Set<String> = [
+        "enabled",
+        "accentColor",
+        "frostTint",
+        "colorLinks",
+        "colorBorders",
+        "colorAllText",
+        "edgeGlow",
+        "excludedDomains"
     ]
 
     func beginRequest(with context: NSExtensionContext) {
@@ -29,96 +27,93 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             let message = item.userInfo?[SFExtensionMessageKey] as? [String: Any],
             let action = message["action"] as? String
         else {
-            responseItem.userInfo = [
-                SFExtensionMessageKey: [
-                    "ok": false,
-                    "error": "Invalid NeonGrid native message."
-                ]
-            ]
-            context.completeRequest(returningItems: [responseItem], completionHandler: nil)
+            finish(
+                context,
+                responseItem,
+                payload: ["ok": false, "error": "Invalid NeonGrid native message."]
+            )
             return
         }
 
-        let response: [String: Any]
         switch action {
         case "getSharedSettings":
-            response = [
-                "ok": true,
-                "settings": readSettings()
-            ]
+            let defaults = sharedDefaults
+            finish(
+                context,
+                responseItem,
+                payload: [
+                    "ok": true,
+                    "revision": defaults.integer(forKey: "settingsRevision"),
+                    "settings": readPendingSettings(defaults)
+                ]
+            )
+
+        case "ackSharedSettings":
+            let requestedRevision = (message["revision"] as? NSNumber)?.intValue
+                ?? (message["revision"] as? Int)
+                ?? -1
+            let defaults = sharedDefaults
+            if requestedRevision == defaults.integer(forKey: "settingsRevision") {
+                defaults.removeObject(forKey: "pendingSettingKeys")
+            }
+            finish(context, responseItem, payload: ["ok": true])
 
         case "setSharedSettings":
-            let patch = message["settings"] as? [String: Any] ?? [:]
-            writeSettings(patch)
-            response = [
-                "ok": true,
-                "settings": readSettings()
-            ]
+            // Compatibility path only. Safari's popup remains authoritative in
+            // browser.storage.local; this never marks unrelated app defaults dirty.
+            if let patch = message["settings"] as? [String: Any] {
+                writeSettings(patch, defaults: sharedDefaults)
+            }
+            finish(context, responseItem, payload: ["ok": true])
 
         default:
-            response = [
-                "ok": false,
-                "error": "Unknown NeonGrid native action."
-            ]
+            finish(
+                context,
+                responseItem,
+                payload: ["ok": false, "error": "Unknown NeonGrid native action."]
+            )
         }
-
-        responseItem.userInfo = [SFExtensionMessageKey: response]
-        context.completeRequest(returningItems: [responseItem], completionHandler: nil)
     }
 
-    private func readSettings() -> [String: Any] {
-        let defaults = sharedDefaults
-        migrateLegacyRendererDefaults(defaults)
-        var settings = defaultSettings
+    private func finish(
+        _ context: NSExtensionContext,
+        _ item: NSExtensionItem,
+        payload: [String: Any]
+    ) {
+        item.userInfo = [SFExtensionMessageKey: payload]
+        context.completeRequest(returningItems: [item], completionHandler: nil)
+    }
 
-        for key in [
-            "enabled",
-            "frostTint",
-            "colorLinks",
-            "colorBorders",
-            "colorAllText",
-            "edgeGlow"
-        ] {
-            if defaults.object(forKey: key) != nil {
-                settings[key] = defaults.bool(forKey: key)
-            }
+    private func readPendingSettings(_ defaults: UserDefaults) -> [String: Any] {
+        let pending = Set(defaults.stringArray(forKey: "pendingSettingKeys") ?? [])
+            .intersection(supportedKeys)
+        guard !pending.isEmpty else { return [:] }
+
+        var patch: [String: Any] = [:]
+
+        for key in ["enabled", "frostTint", "colorLinks", "colorBorders", "colorAllText", "edgeGlow"]
+        where pending.contains(key) {
+            patch[key] = defaults.bool(forKey: key)
         }
 
-        if let accent = defaults.string(forKey: "accentColor"), isValidHex(accent) {
-            settings["accentColor"] = accent.uppercased()
+        if pending.contains("accentColor"),
+           let accent = defaults.string(forKey: "accentColor"),
+           isValidHex(accent) {
+            patch["accentColor"] = accent.uppercased()
         }
 
-        if defaults.object(forKey: "accentIntensity") != nil {
-            settings["accentIntensity"] = clamp(defaults.double(forKey: "accentIntensity"))
-        }
-
-        if defaults.object(forKey: "glowStrength") != nil {
-            settings["glowStrength"] = clamp(defaults.double(forKey: "glowStrength"))
-        }
-
-        if let domains = defaults.array(forKey: "excludedDomains") as? [String] {
-            settings["excludedDomains"] = normalizeDomains(domains)
-        } else if let csv = defaults.string(forKey: "excludedDomainsCSV") {
-            settings["excludedDomains"] = normalizeDomains(
+        if pending.contains("excludedDomains") {
+            let csv = defaults.string(forKey: "excludedDomainsCSV") ?? ""
+            patch["excludedDomains"] = normalizeDomains(
                 csv.split(separator: ",").map(String.init)
             )
         }
 
-        return settings
+        return patch
     }
 
-    private func writeSettings(_ patch: [String: Any]) {
-        let defaults = sharedDefaults
-        migrateLegacyRendererDefaults(defaults)
-
-        for key in [
-            "enabled",
-            "frostTint",
-            "colorLinks",
-            "colorBorders",
-            "colorAllText",
-            "edgeGlow"
-        ] {
+    private func writeSettings(_ patch: [String: Any], defaults: UserDefaults) {
+        for key in ["enabled", "frostTint", "colorLinks", "colorBorders", "colorAllText", "edgeGlow"] {
             if let value = patch[key] as? Bool {
                 defaults.set(value, forKey: key)
             } else if let number = patch[key] as? NSNumber {
@@ -127,54 +122,17 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
 
         if let accent = patch["accentColor"] as? String, isValidHex(accent) {
-            let normalized = accent.uppercased()
-            defaults.set(normalized, forKey: "accentColor")
-            defaults.set(themeID(for: normalized), forKey: "themeID")
-        }
-
-        if let value = numericValue(patch["accentIntensity"]) {
-            defaults.set(clamp(value), forKey: "accentIntensity")
-        }
-
-        if let value = numericValue(patch["glowStrength"]) {
-            defaults.set(clamp(value), forKey: "glowStrength")
+            defaults.set(accent.uppercased(), forKey: "accentColor")
         }
 
         if let domains = patch["excludedDomains"] as? [String] {
             let normalized = normalizeDomains(domains)
-            defaults.set(normalized, forKey: "excludedDomains")
-            defaults.set(normalized.joined(separator: ","), forKey: "excludedDomainsCSV")
-        } else if let domains = patch["excludedDomains"] as? [Any] {
-            let normalized = normalizeDomains(domains.compactMap { $0 as? String })
-            defaults.set(normalized, forKey: "excludedDomains")
             defaults.set(normalized.joined(separator: ","), forKey: "excludedDomainsCSV")
         }
-    }
-
-    private func migrateLegacyRendererDefaults(_ defaults: UserDefaults) {
-        if defaults.integer(forKey: "rendererBaselineVersion") < 2 {
-            defaults.set(1.0, forKey: "accentIntensity")
-            defaults.set(1.0, forKey: "glowStrength")
-            defaults.set(2, forKey: "rendererBaselineVersion")
-        }
-    }
-
-    private func numericValue(_ value: Any?) -> Double? {
-        if let number = value as? NSNumber { return number.doubleValue }
-        if let value = value as? Double { return value }
-        if let value = value as? Int { return Double(value) }
-        return nil
-    }
-
-    private func clamp(_ value: Double) -> Double {
-        min(1, max(0, value))
     }
 
     private func isValidHex(_ value: String) -> Bool {
-        value.range(
-            of: #"^#[0-9A-Fa-f]{6}$"#,
-            options: .regularExpression
-        ) != nil
+        value.range(of: #"^#[0-9A-Fa-f]{6}$"#, options: .regularExpression) != nil
     }
 
     private func normalizeDomains(_ values: [String]) -> [String] {
@@ -186,16 +144,6 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 .trimmingCharacters(in: CharacterSet(charactersIn: "."))
             guard !normalized.isEmpty, seen.insert(normalized).inserted else { return nil }
             return normalized
-        }
-    }
-
-    private func themeID(for accent: String) -> String {
-        switch accent.uppercased() {
-        case "#00F5FF": return "cyan"
-        case "#B026FF": return "purple"
-        case "#00FF66": return "green"
-        case "#FF1744": return "red"
-        default: return "custom"
         }
     }
 }
