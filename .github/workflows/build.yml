@@ -23,7 +23,7 @@ jobs:
           node --check SafariExtension/Resources/popup.js
 
   build-ios:
-    runs-on: macos-15
+    runs-on: macos-26
     needs: validate-extension
     steps:
       - uses: actions/checkout@v4
