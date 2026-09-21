@@ -1,4 +1,4 @@
-const Engine = globalThis.DarkgridSurfaceEngine;
+const Engine = globalThis.NeonGridSurfaceEngine;
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",

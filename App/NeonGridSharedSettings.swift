@@ -9,7 +9,7 @@ enum NeonGridSharedSettings {
             "enabled": true,
             "accentColor": "#00F5FF",
             "themeID": "cyan",
-            "frostTint": true,
+            "frostTint": false,
             "colorLinks": true,
             "colorBorders": true,
             "colorAllText": false,
@@ -20,20 +20,14 @@ enum NeonGridSharedSettings {
             "excludedDomainsCSV": ""
         ])
 
-        if defaults.integer(forKey: "rendererBaselineVersion") < 2 {
-            defaults.set(1.0, forKey: "accentIntensity")
-            defaults.set(1.0, forKey: "glowStrength")
-            defaults.set(2, forKey: "rendererBaselineVersion")
-        }
-
-        if defaults.integer(forKey: "settingsBridgeVersion") < 5 {
-            defaults.set(true, forKey: "frostTint")
+        if defaults.bool(forKey: "recentBridgeCleanupDone") == false {
+            defaults.set(false, forKey: "frostTint")
             defaults.set(true, forKey: "colorLinks")
             defaults.set(true, forKey: "colorBorders")
             defaults.set(false, forKey: "colorAllText")
             defaults.set(false, forKey: "edgeGlow")
             defaults.removeObject(forKey: "pendingSettingKeys")
-            defaults.set(5, forKey: "settingsBridgeVersion")
+            defaults.set(true, forKey: "recentBridgeCleanupDone")
         }
     }
 }

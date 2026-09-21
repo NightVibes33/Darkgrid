@@ -89,7 +89,7 @@ struct ContentView: View {
 
     @AppStorage("enabled", store: NeonGridSharedSettings.defaults) private var runtimeEnabled = true
     @AppStorage("accentColor", store: NeonGridSharedSettings.defaults) private var accentColor = "#00F5FF"
-    @AppStorage("frostTint", store: NeonGridSharedSettings.defaults) private var frostTint = true
+    @AppStorage("frostTint", store: NeonGridSharedSettings.defaults) private var frostTint = false
     @AppStorage("colorLinks", store: NeonGridSharedSettings.defaults) private var colorLinks = true
     @AppStorage("colorBorders", store: NeonGridSharedSettings.defaults) private var colorBorders = true
     @AppStorage("colorAllText", store: NeonGridSharedSettings.defaults) private var colorAllText = false
@@ -223,7 +223,7 @@ struct ContentView: View {
 
     private func resetDashboardPreferences() {
         accentColor = "#00F5FF"
-        frostTint = true
+        frostTint = false
         colorLinks = true
         colorBorders = true
         colorAllText = false
