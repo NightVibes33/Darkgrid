@@ -861,13 +861,12 @@
     installStateHooks();
 
     accent = hexToRgb(settings.accentColor);
-    const brightestSurface = Engine.parseCssColor(
-      Engine.buildSurfaceColors({ r: 255, g: 255, b: 255, a: 1 }, accent).frost
-    ) || { r: 46, g: 46, b: 46 };
-    readableAccent = Engine.ensureReadableAccent(accent, brightestSurface, 4.5);
+    // Use the exact selected accent everywhere. Do not silently lift or alter
+    // custom colors for contrast; #FF0800 must render as #FF0800.
+    readableAccent = { ...accent };
 
     const accentHex = Engine.rgbToHex(accent);
-    const readableHex = Engine.rgbToHex(readableAccent);
+    const readableHex = accentHex;
     enabledNow = Boolean(settings.enabled) && !pageIsExcluded(settings.excludedDomains);
 
     root.style.setProperty("--darkgrid-accent", accentHex);

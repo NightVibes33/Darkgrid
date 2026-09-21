@@ -54,7 +54,7 @@ body::before{content:"";position:absolute;width:12px;height:12px;background:#fff
 await page.evaluate(() => {
   const settings = {
     enabled: true,
-    accentColor: '#00FF66',
+    accentColor: '#FF0800',
     frostTint: true,
     colorLinks: false,
     colorBorders: true,
@@ -94,6 +94,8 @@ await page.waitForFunction(() =>
 );
 
 const initial = await page.evaluate(() => ({
+  accentVar: getComputedStyle(document.documentElement).getPropertyValue('--darkgrid-accent').trim(),
+  readableAccentVar: getComputedStyle(document.documentElement).getPropertyValue('--darkgrid-accent-readable').trim(),
   html: getComputedStyle(document.documentElement).backgroundColor,
   body: getComputedStyle(document.body).backgroundColor,
   htmlPseudo: getComputedStyle(document.documentElement, '::before').backgroundColor,
@@ -130,22 +132,24 @@ const initial = await page.evaluate(() => ({
   focus: getComputedStyle(document.querySelector('#focusable')).backgroundColor
 }));
 
+assert.equal(initial.accentVar.toUpperCase(), '#FF0800', 'selected accent variable must preserve the exact custom hex');
+assert.equal(initial.readableAccentVar.toUpperCase(), '#FF0800', 'readable accent must not substitute a different color');
 assert.notEqual(initial.html, 'rgb(255, 255, 255)', 'html surface must be mapped');
 assert.notEqual(initial.body, 'rgb(255, 255, 255)', 'body surface must be mapped');
 assert.notEqual(initial.htmlPseudo, 'rgba(255, 255, 255, 0.08)', 'html pseudo surface must be mapped');
 assert.notEqual(initial.bodyPseudo, 'rgb(255, 255, 255)', 'body pseudo surface must be mapped');
 assert.notEqual(initial.solid, 'rgb(255, 255, 255)');
-assert.equal(initial.solidText, 'rgb(0, 255, 102)', 'Color All Text must include direct div text');
+assert.equal(initial.solidText, 'rgb(255, 8, 0)', 'Color All Text must include direct div text');
 assert.match(initial.alpha, /rgba\([^)]*,\s*0\.1\)/, 'semi-transparent surfaces must preserve alpha');
 assert.notEqual(initial.pseudo, 'rgb(255, 255, 255)', 'pseudo-element backgrounds must be mapped');
 assert.notEqual(initial.pseudoShadow, 'rgb(255, 255, 255) 0px 0px 8px 0px', 'bright pseudo shadows must be rewritten');
 assert.ok(initial.pseudoGradient.includes('gradient'), 'pseudo gradients must remain gradients');
 assert.notEqual(initial.shadow, 'rgb(255, 255, 255)', 'open Shadow DOM surfaces must be mapped');
 assert.notEqual(initial.shadowPseudo, 'rgb(255, 255, 255)', 'Shadow DOM pseudo-elements must be mapped');
-assert.notEqual(initial.link, 'rgb(0, 255, 102)', 'Color Links OFF must override Color All Text ON');
-assert.notEqual(initial.nestedLink, 'rgb(0, 255, 102)', 'nested link text must respect Color Links OFF');
-assert.notEqual(initial.linkPseudo, 'rgb(0, 255, 102)', 'link pseudo text must respect Color Links OFF');
-assert.notEqual(initial.shadowNestedLink, 'rgb(0, 255, 102)', 'Shadow DOM nested link text must respect Color Links OFF');
+assert.notEqual(initial.link, 'rgb(255, 8, 0)', 'Color Links OFF must override Color All Text ON');
+assert.notEqual(initial.nestedLink, 'rgb(255, 8, 0)', 'nested link text must respect Color Links OFF');
+assert.notEqual(initial.linkPseudo, 'rgb(255, 8, 0)', 'link pseudo text must respect Color Links OFF');
+assert.notEqual(initial.shadowNestedLink, 'rgb(255, 8, 0)', 'Shadow DOM nested link text must respect Color Links OFF');
 assert.match(initial.photoImage, /url\(/, 'raster background pixels must remain intact');
 assert.match(initial.spriteImage, /url\(/, 'CSS sprite pixels must remain intact');
 assert.equal(initial.transparentBorderMapped, false, 'transparent borders must remain invisible');

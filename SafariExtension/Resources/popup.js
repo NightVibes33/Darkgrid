@@ -65,9 +65,7 @@ function safeHex(value) {
 }
 
 function readableHex(value) {
-  const accent = hexToRgb(safeHex(value));
-  if (!Engine) return safeHex(value);
-  return Engine.rgbToHex(Engine.ensureReadableAccent(accent, { r: 46, g: 46, b: 46 }, 4.5));
+  return safeHex(value);
 }
 
 function normalizeSettings(next) {

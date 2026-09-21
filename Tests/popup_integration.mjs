@@ -88,6 +88,20 @@ assert.equal(race.displayedAccent, '#B026FF');
 assert.equal(race.writes.at(-1), '#B026FF', 'stale custom-color timer must never overwrite the preset');
 assert.equal(race.pressed, 'true');
 
+await page.fill('#hexColor', '#FF0800');
+await page.dispatchEvent('#hexColor', 'change');
+await page.waitForFunction(() => window.__state.accentColor === '#FF0800');
+const exactCustom = await page.evaluate(() => ({
+  stateAccent: window.__state.accentColor,
+  displayedAccent: document.querySelector('#hexColor').value,
+  accentCss: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+  readableCss: getComputedStyle(document.documentElement).getPropertyValue('--accent-readable').trim()
+}));
+assert.equal(exactCustom.stateAccent, '#FF0800');
+assert.equal(exactCustom.displayedAccent, '#FF0800');
+assert.equal(exactCustom.accentCss.toUpperCase(), '#FF0800');
+assert.equal(exactCustom.readableCss.toUpperCase(), '#FF0800', 'popup must not preview a substituted readable color');
+
 await page.evaluate(() => {
   window.__state.enabled = false;
   window.__storageListener?.({ enabled: { oldValue: true, newValue: false } }, 'local');
@@ -98,7 +112,7 @@ assert.equal(await page.$eval('#enabled', input => input.checked), false);
 await page.fill('#hexColor', 'nothex');
 await page.dispatchEvent('#hexColor', 'change');
 await page.waitForFunction(() => document.querySelector('#errorText').textContent.includes('six-digit hex color'));
-assert.equal(await page.$eval('#hexColor', input => input.value), '#B026FF');
+assert.equal(await page.$eval('#hexColor', input => input.value), '#FF0800');
 
 for (const id of ['frostTint', 'colorLinks', 'colorBorders', 'colorAllText', 'edgeGlow']) {
   const labelled = await page.$eval(`#${id}`, input =>

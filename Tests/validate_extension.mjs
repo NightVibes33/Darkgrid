@@ -31,7 +31,7 @@ for (const token of [
   'ensureShadowStyles', 'darkgrid-measuring', 'data-darkgrid-shadow-measuring',
   '::before', '::after', 'data-darkgrid-before-gradient', 'data-darkgrid-before-shadow',
   'characterData', 'attributes: true', 'isSiteStylesheetElement', 'mutationAffectsStylesheet',
-  'stylesheetContext', 'ancestorOrigins', 'ensureReadableAccent', 'adoptedStyleSheets',
+  'stylesheetContext', 'ancestorOrigins', 'adoptedStyleSheets',
   'pollStylesheets', 'refreshMediaQueryListeners', 'orientationchange', 'visualViewport',
   'animationstart', 'transitionrun', 'pumpAnimatedTargets', 'discoverOpenShadowRoots',
   'data-darkgrid-svg-fill', 'text,tspan,use', 'darkgrid-edge-glow', 'pageshow'
@@ -84,6 +84,7 @@ assert.match(popup, /accentSaveGeneration/);
 assert.match(popup, /Promise\.allSettled/);
 assert.match(popup, /storage\.onChanged/);
 assert.match(popup, /aria-pressed/);
+assert.match(popup, /function readableHex\(value\)\s*\{\s*return safeHex\(value\);\s*\}/);
 assert.doesNotMatch(popup, /sendMessage/);
 assert.doesNotMatch(popup, /startsWith\(["']\*\./);
 assert.match(popup, /setTimeout\([^]*90/);
