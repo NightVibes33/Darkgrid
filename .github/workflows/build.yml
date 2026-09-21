@@ -38,7 +38,7 @@ jobs:
         run: |
           plutil -lint App/Info.plist
           plutil -lint SafariExtension/Info.plist
-          plutil -lint SafariExtension/Resources/manifest.json
+          python3 -m json.tool SafariExtension/Resources/manifest.json >/dev/null
 
       - name: Build unsigned iOS app
         run: |
