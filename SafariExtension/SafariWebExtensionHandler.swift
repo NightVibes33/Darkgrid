@@ -38,6 +38,7 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         switch action {
         case "getSharedSettings":
             let defaults = sharedDefaults
+            migrateBrokenBridgeState(defaults)
             finish(
                 context,
                 responseItem,
@@ -82,6 +83,18 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     ) {
         item.userInfo = [SFExtensionMessageKey: payload]
         context.completeRequest(returningItems: [item], completionHandler: nil)
+    }
+
+    private func migrateBrokenBridgeState(_ defaults: UserDefaults) {
+        if defaults.integer(forKey: "settingsBridgeVersion") < 4 {
+            defaults.set(false, forKey: "frostTint")
+            defaults.set(true, forKey: "colorLinks")
+            defaults.set(true, forKey: "colorBorders")
+            defaults.set(false, forKey: "colorAllText")
+            defaults.set(false, forKey: "edgeGlow")
+            defaults.removeObject(forKey: "pendingSettingKeys")
+            defaults.set(4, forKey: "settingsBridgeVersion")
+        }
     }
 
     private func readPendingSettings(_ defaults: UserDefaults) -> [String: Any] {

@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "NeonGrid: Dark Mode for Safari",
   "version": "1.2.0",
-  "description": "True-black OLED dark mode with neon accents, frost, borders, text styling, and edge glow for Safari.",
+  "description": "True-black OLED dark mode with neon accents for Safari.",
   "permissions": [
     "storage",
     "tabs",
@@ -29,12 +29,10 @@
         "theme.css"
       ],
       "js": [
-        "surface-engine.js",
         "content.js"
       ],
       "run_at": "document_start",
-      "all_frames": true,
-      "match_about_blank": true
+      "all_frames": false
     }
   ]
 }

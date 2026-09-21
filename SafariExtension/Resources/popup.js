@@ -2,7 +2,7 @@ const Engine = globalThis.DarkgridSurfaceEngine;
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",
-  frostTint: true,
+  frostTint: false,
   colorLinks: true,
   colorBorders: true,
   colorAllText: false,

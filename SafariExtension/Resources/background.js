@@ -1,7 +1,7 @@
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",
-  frostTint: true,
+  frostTint: false,
   colorLinks: true,
   colorBorders: true,
   colorAllText: false,
@@ -10,25 +10,39 @@ const DEFAULT_SETTINGS = {
 };
 
 const NATIVE_APP_ID = "com.nightvibes33.Darkgrid";
+const LEGACY_VISUAL_RESET_VERSION = 3;
 
-async function ensureDefaults() {
-  const existing = await browser.storage.local.get(Object.keys(DEFAULT_SETTINGS));
-  const missing = {};
+async function ensureDefaultsAndRepairRedesignState() {
+  const keys = [...Object.keys(DEFAULT_SETTINGS), "legacyVisualResetVersion"];
+  const existing = await browser.storage.local.get(keys);
+  const patch = {};
+
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-    if (typeof existing[key] === "undefined") missing[key] = value;
+    if (typeof existing[key] === "undefined") patch[key] = value;
   }
-  if (Object.keys(missing).length) await browser.storage.local.set(missing);
+
+  if (Number(existing.legacyVisualResetVersion || 0) < LEGACY_VISUAL_RESET_VERSION) {
+    // The redesigned native app accidentally pushed appearance defaults into
+    // Safari. Repair those toggles once, while deliberately preserving the
+    // user's selected accent color and site exclusions.
+    patch.frostTint = false;
+    patch.colorLinks = true;
+    patch.colorBorders = true;
+    patch.colorAllText = false;
+    patch.edgeGlow = false;
+    patch.legacyVisualResetVersion = LEGACY_VISUAL_RESET_VERSION;
+  }
+
+  if (Object.keys(patch).length) await browser.storage.local.set(patch);
 }
 
 async function syncExplicitAppChanges() {
   if (typeof browser.runtime?.sendNativeMessage !== "function") return;
-
   try {
     const response = await browser.runtime.sendNativeMessage(
       NATIVE_APP_ID,
       { action: "getSharedSettings" }
     );
-
     if (!response?.ok) return;
 
     const patch = response.settings && typeof response.settings === "object"
@@ -36,12 +50,7 @@ async function syncExplicitAppChanges() {
       : {};
     const revision = Number(response.revision || 0);
 
-    // Critical compatibility rule: only keys explicitly changed in the native
-    // NeonGrid UI are returned here. App defaults can never overwrite the
-    // Safari extension's existing visual state.
-    if (Object.keys(patch).length) {
-      await browser.storage.local.set(patch);
-    }
+    if (Object.keys(patch).length) await browser.storage.local.set(patch);
 
     if (revision > 0) {
       try {
@@ -57,28 +66,14 @@ async function syncExplicitAppChanges() {
 }
 
 browser.runtime.onInstalled.addListener(async () => {
-  await ensureDefaults();
+  await ensureDefaultsAndRepairRedesignState();
   await syncExplicitAppChanges();
 });
 
 if (browser.runtime.onStartup?.addListener) {
   browser.runtime.onStartup.addListener(() => {
-    void syncExplicitAppChanges();
+    void ensureDefaultsAndRepairRedesignState().then(syncExplicitAppChanges);
   });
 }
 
-if (browser.tabs?.onActivated?.addListener) {
-  browser.tabs.onActivated.addListener(() => {
-    void syncExplicitAppChanges();
-  });
-}
-
-if (browser.tabs?.onUpdated?.addListener) {
-  browser.tabs.onUpdated.addListener((_tabId, changeInfo) => {
-    if (changeInfo?.status === "loading") {
-      void syncExplicitAppChanges();
-    }
-  });
-}
-
-void ensureDefaults();
+void ensureDefaultsAndRepairRedesignState();
