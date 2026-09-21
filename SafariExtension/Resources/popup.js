@@ -218,7 +218,7 @@ function render() {
     siteToggle.textContent = excluded ? "ENABLE ON THIS SITE" : "DISABLE ON THIS SITE";
     siteToggle.setAttribute(
       "aria-label",
-      excluded ? `Enable Darkgrid on ${activeDomain}` : `Disable Darkgrid on ${activeDomain}`
+      excluded ? `Enable NeonGrid on ${activeDomain}` : `Disable NeonGrid on ${activeDomain}`
     );
   } else {
     domainLabel.textContent = "Unavailable on this page";

@@ -1,4 +1,4 @@
-name: Build Darkgrid
+name: Build NeonGrid
 
 on:
   push:
@@ -61,6 +61,9 @@ jobs:
 
       - name: Generate Xcode project
         run: xcodegen generate
+
+      - name: Generate NeonGrid app icon
+        run: xcrun swift Scripts/generate_app_icon.swift App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
 
       - name: Validate source metadata, resources, and icon
         run: |
@@ -139,12 +142,12 @@ jobs:
       - name: Package and revalidate unsigned IPA
         run: |
           APP="build/Build/Products/Release-iphoneos/Darkgrid.app"
-          rm -rf Payload verify-ipa Darkgrid-unsigned.ipa
+          rm -rf Payload verify-ipa NeonGrid-unsigned.ipa
           mkdir Payload
           cp -R "$APP" Payload/
-          zip -qry Darkgrid-unsigned.ipa Payload
+          zip -qry NeonGrid-unsigned.ipa Payload
           mkdir verify-ipa
-          unzip -q Darkgrid-unsigned.ipa -d verify-ipa
+          unzip -q NeonGrid-unsigned.ipa -d verify-ipa
           PACKAGED_APP="verify-ipa/Payload/Darkgrid.app"
           EXT="$PACKAGED_APP/PlugIns/DarkgridExtension.appex"
           test -d "$EXT"
@@ -154,10 +157,10 @@ jobs:
           for file in manifest.json background.js surface-engine.js content.js theme.css popup.html popup.css popup.js; do
             test -f "$EXT/$file"
           done
-          shasum -a 256 Darkgrid-unsigned.ipa
+          shasum -a 256 NeonGrid-unsigned.ipa
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Darkgrid-unsigned
-          path: Darkgrid-unsigned.ipa
+          name: NeonGrid-unsigned
+          path: NeonGrid-unsigned.ipa
           if-no-files-found: error

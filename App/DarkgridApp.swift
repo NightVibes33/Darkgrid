@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct DarkgridApp: App {
+struct NeonGridApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

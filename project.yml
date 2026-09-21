@@ -21,6 +21,11 @@ targets:
     dependencies:
       - target: DarkgridExtension
         embed: true
+    preBuildScripts:
+      - name: Generate NeonGrid app icon
+        script: |
+          xcrun swift "$SRCROOT/Scripts/generate_app_icon.swift" "$SRCROOT/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.nightvibes33.Darkgrid
