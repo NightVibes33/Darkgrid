@@ -79,8 +79,8 @@ jobs:
           p='SafariExtension/Resources/manifest.json'
           m=json.load(open(p))
           assert m['version']=='1.2.0'
-          assert m['content_scripts'][0]['all_frames'] is True
-          assert m['content_scripts'][0]['match_about_blank'] is True
+          assert m['content_scripts'][0]['all_frames'] is False
+          assert m['content_scripts'][0]['js'] == ['content.js']
           PY
           python3 -m json.tool App/Assets.xcassets/Contents.json >/dev/null
           python3 -m json.tool App/Assets.xcassets/AppIcon.appiconset/Contents.json >/dev/null
@@ -138,13 +138,15 @@ jobs:
             test -f "$EXT/$file" || { echo "Missing extension resource: $file"; exit 1; }
           done
           python3 -m json.tool "$EXT/manifest.json" >/dev/null
-          grep -F '"all_frames": true' "$EXT/manifest.json"
-          grep -F '"match_about_blank": true' "$EXT/manifest.json"
-          grep -F 'darkgrid-measuring' "$EXT/theme.css"
-          grep -F 'adoptedStyleSheets' "$EXT/content.js"
+          grep -F '"all_frames": false' "$EXT/manifest.json"
+          grep -F '"js": [' "$EXT/manifest.json"
+          grep -F '"content.js"' "$EXT/manifest.json"
+          grep -F 'darkgrid-frost::before' "$EXT/theme.css"
+          grep -F 'mix-blend-mode: screen' "$EXT/theme.css"
+          grep -F 'background: #000 !important' "$EXT/theme.css"
+          ! grep -F 'data-darkgrid-surface' "$EXT/theme.css"
+          ! grep -F 'DarkgridSurfaceEngine' "$EXT/content.js"
           grep -F 'getStateOfExtension' App/ContentView.swift
-          ! grep -E 'backdrop-filter[[:space:]]*:|background-blend-mode:[[:space:]]*multiply' "$EXT/theme.css"
-          ! grep -E ':where\(img,[[:space:]]*video,[[:space:]]*canvas,[[:space:]]*picture,[[:space:]]*iframe,[[:space:]]*object,[[:space:]]*embed\)' "$EXT/theme.css"
 
       - name: Package and revalidate unsigned IPA
         run: |
