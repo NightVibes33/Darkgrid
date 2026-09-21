@@ -76,7 +76,7 @@ const result = await page.evaluate(() => ({
 
 assert.equal(result.htmlBg, 'rgb(0, 0, 0)', 'selected accent must not tint the page root');
 assert.equal(result.bodyBg, 'rgb(0, 0, 0)', 'selected accent must not tint the body');
-assert.equal(result.mainBg, 'rgb(0, 0, 0)', 'major surfaces stay true black');
+assert.equal(result.mainBg, 'rgba(0, 0, 0, 0)', 'major surfaces remain transparent over the true-black body');
 assert.equal(result.cardBg, 'rgba(0, 0, 0, 0)', 'generic containers remain transparent over black');
 assert.equal(result.title, 'rgb(231, 231, 231)', 'normal text stays neutral when Color All Text is off');
 assert.equal(result.link, 'rgb(255, 23, 68)', 'selected red applies to links');
