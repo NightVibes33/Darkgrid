@@ -86,14 +86,14 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
 
     private func migrateBrokenBridgeState(_ defaults: UserDefaults) {
-        if defaults.integer(forKey: "settingsBridgeVersion") < 4 {
-            defaults.set(false, forKey: "frostTint")
+        if defaults.integer(forKey: "settingsBridgeVersion") < 5 {
+            defaults.set(true, forKey: "frostTint")
             defaults.set(true, forKey: "colorLinks")
             defaults.set(true, forKey: "colorBorders")
             defaults.set(false, forKey: "colorAllText")
             defaults.set(false, forKey: "edgeGlow")
             defaults.removeObject(forKey: "pendingSettingKeys")
-            defaults.set(4, forKey: "settingsBridgeVersion")
+            defaults.set(5, forKey: "settingsBridgeVersion")
         }
     }
 

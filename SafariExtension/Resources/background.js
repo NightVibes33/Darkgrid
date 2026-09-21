@@ -1,7 +1,7 @@
 const DEFAULT_SETTINGS = {
   enabled: true,
   accentColor: "#00F5FF",
-  frostTint: false,
+  frostTint: true,
   colorLinks: true,
   colorBorders: true,
   colorAllText: false,
@@ -10,10 +10,10 @@ const DEFAULT_SETTINGS = {
 };
 
 const NATIVE_APP_ID = "com.nightvibes33.Darkgrid";
-const LEGACY_VISUAL_RESET_VERSION = 3;
+const VISUAL_STATE_VERSION = 5;
 
-async function ensureDefaultsAndRepairRedesignState() {
-  const keys = [...Object.keys(DEFAULT_SETTINGS), "legacyVisualResetVersion"];
+async function ensureDefaultsAndRepairState() {
+  const keys = [...Object.keys(DEFAULT_SETTINGS), "visualStateVersion"];
   const existing = await browser.storage.local.get(keys);
   const patch = {};
 
@@ -21,16 +21,15 @@ async function ensureDefaultsAndRepairRedesignState() {
     if (typeof existing[key] === "undefined") patch[key] = value;
   }
 
-  if (Number(existing.legacyVisualResetVersion || 0) < LEGACY_VISUAL_RESET_VERSION) {
-    // The redesigned native app accidentally pushed appearance defaults into
-    // Safari. Repair those toggles once, while deliberately preserving the
-    // user's selected accent color and site exclusions.
-    patch.frostTint = false;
+  if (Number(existing.visualStateVersion || 0) < VISUAL_STATE_VERSION) {
+    // Restore the exact pre-redesign appearance defaults. Keep the user's
+    // selected accent, enabled state, and excluded sites intact.
+    patch.frostTint = true;
     patch.colorLinks = true;
     patch.colorBorders = true;
     patch.colorAllText = false;
     patch.edgeGlow = false;
-    patch.legacyVisualResetVersion = LEGACY_VISUAL_RESET_VERSION;
+    patch.visualStateVersion = VISUAL_STATE_VERSION;
   }
 
   if (Object.keys(patch).length) await browser.storage.local.set(patch);
@@ -38,6 +37,7 @@ async function ensureDefaultsAndRepairRedesignState() {
 
 async function syncExplicitAppChanges() {
   if (typeof browser.runtime?.sendNativeMessage !== "function") return;
+
   try {
     const response = await browser.runtime.sendNativeMessage(
       NATIVE_APP_ID,
@@ -50,7 +50,9 @@ async function syncExplicitAppChanges() {
       : {};
     const revision = Number(response.revision || 0);
 
-    if (Object.keys(patch).length) await browser.storage.local.set(patch);
+    if (Object.keys(patch).length) {
+      await browser.storage.local.set(patch);
+    }
 
     if (revision > 0) {
       try {
@@ -66,14 +68,20 @@ async function syncExplicitAppChanges() {
 }
 
 browser.runtime.onInstalled.addListener(async () => {
-  await ensureDefaultsAndRepairRedesignState();
+  await ensureDefaultsAndRepairState();
   await syncExplicitAppChanges();
 });
 
 if (browser.runtime.onStartup?.addListener) {
   browser.runtime.onStartup.addListener(() => {
-    void ensureDefaultsAndRepairRedesignState().then(syncExplicitAppChanges);
+    void ensureDefaultsAndRepairState().then(syncExplicitAppChanges);
   });
 }
 
-void ensureDefaultsAndRepairRedesignState();
+if (browser.tabs?.onActivated?.addListener) {
+  browser.tabs.onActivated.addListener(() => {
+    void syncExplicitAppChanges();
+  });
+}
+
+void ensureDefaultsAndRepairState();
