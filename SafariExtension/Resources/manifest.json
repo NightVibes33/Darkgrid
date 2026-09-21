@@ -1,13 +1,12 @@
 {
   "manifest_version": 2,
-  "name": "NeonGrid: Dark Mode for Safari",
+  "name": "NeonGrid",
   "version": "1.2.0",
-  "description": "True-black OLED dark mode with neon accents for Safari.",
+  "description": "True-black neon dark mode for Safari.",
   "permissions": [
     "storage",
     "tabs",
     "activeTab",
-    "nativeMessaging",
     "<all_urls>"
   ],
   "background": {

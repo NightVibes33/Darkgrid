@@ -87,23 +87,21 @@ private struct NeonTheme: Identifiable, Equatable {
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
-    @AppStorage("enabled", store: NeonGridSharedSettings.defaults) private var runtimeEnabled = true
-    @AppStorage("accentColor", store: NeonGridSharedSettings.defaults) private var accentColor = "#00F5FF"
-    @AppStorage("frostTint", store: NeonGridSharedSettings.defaults) private var frostTint = false
-    @AppStorage("colorLinks", store: NeonGridSharedSettings.defaults) private var colorLinks = true
-    @AppStorage("colorBorders", store: NeonGridSharedSettings.defaults) private var colorBorders = true
-    @AppStorage("colorAllText", store: NeonGridSharedSettings.defaults) private var colorAllText = false
-    @AppStorage("edgeGlow", store: NeonGridSharedSettings.defaults) private var edgeGlow = false
-    @AppStorage("accentIntensity", store: NeonGridSharedSettings.defaults) private var accentIntensity = 1.0
-    @AppStorage("glowStrength", store: NeonGridSharedSettings.defaults) private var glowStrength = 1.0
-    @AppStorage("surfaceStyle", store: NeonGridSharedSettings.defaults) private var surfaceStyle = "frosted"
-    @AppStorage("excludedDomainsCSV", store: NeonGridSharedSettings.defaults) private var excludedDomains = ""
+    @AppStorage("enabled") private var runtimeEnabled = true
+    @AppStorage("accentColor") private var accentColor = "#00F5FF"
+    @AppStorage("frostTint") private var frostTint = false
+    @AppStorage("colorLinks") private var colorLinks = true
+    @AppStorage("colorBorders") private var colorBorders = true
+    @AppStorage("colorAllText") private var colorAllText = false
+    @AppStorage("edgeGlow") private var edgeGlow = false
+    @AppStorage("accentIntensity") private var accentIntensity = 1.0
+    @AppStorage("glowStrength") private var glowStrength = 1.0
+    @AppStorage("surfaceStyle") private var surfaceStyle = "frosted"
+    @AppStorage("excludedDomainsCSV") private var excludedDomains = ""
 
     @State private var selectedTab: NeonTab = .home
     @State private var extensionState: SafariExtensionState = .checking
     @State private var previewStyled = true
-    @State private var settingsBridgeReady = false
-
     private let extensionBundleIdentifier = "com.nightvibes33.Darkgrid.Extension"
 
     private var theme: NeonTheme { NeonTheme.theme(forHex: accentColor) }
@@ -167,35 +165,11 @@ struct ContentView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear {
-            NeonGridSharedSettings.registerDefaults()
             refreshExtensionStatus()
-            DispatchQueue.main.async {
-                settingsBridgeReady = true
-            }
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active { refreshExtensionStatus() }
         }
-        .onChange(of: runtimeEnabled) { _ in queueSharedSettingChange("enabled") }
-        .onChange(of: accentColor) { _ in queueSharedSettingChange("accentColor") }
-        .onChange(of: frostTint) { _ in queueSharedSettingChange("frostTint") }
-        .onChange(of: colorLinks) { _ in queueSharedSettingChange("colorLinks") }
-        .onChange(of: colorBorders) { _ in queueSharedSettingChange("colorBorders") }
-        .onChange(of: colorAllText) { _ in queueSharedSettingChange("colorAllText") }
-        .onChange(of: edgeGlow) { _ in queueSharedSettingChange("edgeGlow") }
-        .onChange(of: excludedDomains) { _ in queueSharedSettingChange("excludedDomains") }
-    }
-
-    private func queueSharedSettingChange(_ key: String) {
-        guard settingsBridgeReady else { return }
-        let defaults = NeonGridSharedSettings.defaults
-        var pending = defaults.stringArray(forKey: "pendingSettingKeys") ?? []
-        if !pending.contains(key) {
-            pending.append(key)
-            defaults.set(pending, forKey: "pendingSettingKeys")
-        }
-        let nextRevision = defaults.integer(forKey: "settingsRevision") + 1
-        defaults.set(nextRevision, forKey: "settingsRevision")
     }
 
     private func refreshExtensionStatus() {
@@ -233,7 +207,6 @@ struct ContentView: View {
         surfaceStyle = "frosted"
         excludedDomains = ""
         runtimeEnabled = true
-        NeonGridSharedSettings.defaults.set([String](), forKey: "excludedDomains")
     }
 }
 
@@ -608,14 +581,12 @@ private struct SitesScreen: View {
         var next = domains
         if !next.contains(host) { next.append(host) }
         excludedDomains = next.joined(separator: ",")
-        NeonGridSharedSettings.defaults.set(next, forKey: "excludedDomains")
         newDomain = ""
     }
 
     private func removeDomain(_ domain: String) {
         let next = domains.filter { $0 != domain }
         excludedDomains = next.joined(separator: ",")
-        NeonGridSharedSettings.defaults.set(next, forKey: "excludedDomains")
     }
 }
 
