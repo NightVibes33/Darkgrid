@@ -17,13 +17,7 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: App
-        excludes: [Info.plist, NeonGrid.entitlements, NeonGridSharedSettings.swift]
-    preBuildScripts:
-      - name: Generate NeonGrid app icon
-        script: |
-          cat "$SRCROOT"/Scripts/NeonGridIconSource.*.b64 | /usr/bin/base64 -D > /tmp/neongrid-icon-source.jpg
-          /usr/bin/sips -s format png -z 1024 1024 /tmp/neongrid-icon-source.jpg --out "$SRCROOT/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" >/dev/null
-        basedOnDependencyAnalysis: false
+        excludes: [Info.plist]
     dependencies:
       - target: DarkgridExtension
         embed: true
@@ -42,7 +36,7 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: SafariExtension
-        excludes: [Info.plist, Resources, NeonGridExtension.entitlements]
+        excludes: [Info.plist, Resources]
       - path: SafariExtension/Resources
         buildPhase: resources
     settings:
