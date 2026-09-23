@@ -1,4 +1,4 @@
-name: Tesseract transfer
+name: Mesa Vulkan transfer
 
 on:
   push:
@@ -9,18 +9,18 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - name: Download official Mirage Tesseract Linux preview
+      - name: Download Debian 13 Mesa Vulkan driver
         shell: bash
         run: |
           set -euo pipefail
-          url="https://github.com/mirage-hq/Tesseract/releases/download/v0.2.0-preview.1/tesseract-0.2.0-preview.1-linux-x86_64.zip"
-          curl -fL "$url" -o tesseract-0.2.0-preview.1-linux-x86_64.zip
-          echo "c81a89d180dfa08d55fa4b12ecbbfe2eac51c330956998e14eb4873bc00e1ee1  tesseract-0.2.0-preview.1-linux-x86_64.zip" | sha256sum -c -
-      - name: Upload verified bundle
+          url="https://ftp.debian.org/debian/pool/main/m/mesa/mesa-vulkan-drivers_25.0.7-2%2Bdeb13u1_amd64.deb"
+          curl -fL "$url" -o mesa-vulkan-drivers_25.0.7-2+deb13u1_amd64.deb
+          echo "caf2f7d296b7522efe74e40a74bce762a3ce84c33b53b5e54e1248ac2e0a13a5  mesa-vulkan-drivers_25.0.7-2+deb13u1_amd64.deb" | sha256sum -c -
+      - name: Upload verified Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: tesseract-linux-preview
-          path: tesseract-0.2.0-preview.1-linux-x86_64.zip
+          name: mesa-vulkan-driver
+          path: mesa-vulkan-drivers_25.0.7-2+deb13u1_amd64.deb
           if-no-files-found: error
           compression-level: 0
           retention-days: 1
