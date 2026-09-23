@@ -1,0 +1,26 @@
+name: Mabu social pack transfer
+
+on:
+  push:
+    branches:
+      - mabu-assets-transfer-20260922
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch social pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 'https://d2ol7oe51mr4n9.cloudfront.net/user_3JA62RTSWrerhK4O20lVs9K7hJj/01af38b0-22ec-49aa-b672-c6752392946d.zip' -o mabu-social-pack.zip
+          test "$(stat -c%s mabu-social-pack.zip)" -gt 1000000
+          unzip -l mabu-social-pack.zip
+      - name: Upload social pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: mabu-social-pack
+          path: mabu-social-pack.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
