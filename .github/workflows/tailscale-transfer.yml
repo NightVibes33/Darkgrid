@@ -1,0 +1,35 @@
+name: Tailscale package transfer
+
+on:
+  push:
+    branches:
+      - tailscale-transfer-20260922
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - name: Download signed Tailscale Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl gnupg
+          install -d -m 0755 /usr/share/keyrings
+          curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg -o /usr/share/keyrings/tailscale-archive-keyring.gpg
+          curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.tailscale-keyring.list -o /etc/apt/sources.list.d/tailscale.list
+          apt-get update
+          mkdir -p /out
+          cd /out
+          apt-get download tailscale
+          dpkg-deb -f tailscale_*.deb Package Version Architecture Depends | tee package-info.txt
+          sha256sum tailscale_*.deb | tee SHA256SUMS
+      - name: Upload Tailscale package
+        uses: actions/upload-artifact@v4
+        with:
+          name: tailscale-debian-trixie
+          path: /out/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
